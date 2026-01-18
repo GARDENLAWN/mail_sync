@@ -40,11 +40,18 @@ class Message extends Action
 
         $attachments = [];
         foreach ($attachmentCollection as $att) {
+            $contentId = $att->getContentId();
+            // Clean content_id: remove < and > if present
+            if ($contentId) {
+                $contentId = trim($contentId, '<>');
+            }
+
             $attachments[] = [
                 'id' => (int)$att->getId(),
                 'filename' => $this->ensureUtf8($att->getFilename()),
                 'size' => $att->getSize(),
                 'mime' => $att->getMimeType(),
+                'content_id' => $contentId, // Add cleaned content_id to response
                 'download_url' => $this->getUrl('gardenlawn_mailsync/message/download', ['attachment_id' => $att->getId()])
             ];
         }

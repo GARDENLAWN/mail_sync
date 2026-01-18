@@ -14,10 +14,10 @@
             <template x-for="folder in folders" :key="folder.id">
                 <div class="mailsync-folder-item"
                      :class="{ 'active': activeFolderId === folder.id }"
-                     :style="'padding-left: ' + (1.5 + (getFolderLevel(folder.path) * 1.5)) + 'rem'"
+                     :style="'padding-left: ' + (1.5 + (getFolderLevel(folder.name) * 1.5)) + 'rem'"
                      @click="selectFolder(folder.id)">
                     <span class="folder-icon">📁</span>
-                    <span x-text="folder.name"></span>
+                    <span x-text="getFolderName(folder.name)"></span>
                 </div>
             </template>
         </div>
@@ -88,13 +88,25 @@
                     </div>
                 </div>
 
-                <div class="message-body text-base leading-relaxed text-gray-700 mb-12" x-html="activeMessage.content"></div>
+                <div class="message-body text-base leading-relaxed text-gray-700 mb-8" x-html="processContent(activeMessage.content, activeMessage.attachments)"></div>
 
-                <template x-if="activeMessage.attachments && activeMessage.attachments.length > 0">
+                <!-- Images displayed as content (only those NOT inline) -->
+                <template x-if="activeMessage.attachments && hasImageAttachments(activeMessage.attachments)">
+                    <div class="message-images-content mb-8">
+                        <template x-for="att in getImageAttachments(activeMessage.attachments)" :key="att.id">
+                            <div class="mb-6">
+                                <img :src="att.download_url" class="max-w-full h-auto rounded shadow-sm border border-gray-100" :alt="att.filename" loading="lazy">
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Non-image Attachments -->
+                <template x-if="activeMessage.attachments && hasNonImageAttachments(activeMessage.attachments)">
                     <div class="message-attachments border-t border-gray-200 pt-6">
                         <h4 class="mb-4 text-gray-600 uppercase text-xs font-bold tracking-wide">Attachments</h4>
                         <div class="attachments-grid flex flex-wrap gap-4">
-                            <template x-for="att in activeMessage.attachments" :key="att.id">
+                            <template x-for="att in getNonImageAttachments(activeMessage.attachments)" :key="att.id">
                                 <a :href="att.download_url" target="_blank" class="attachment-card flex items-center px-4 py-3 bg-gray-100 border border-gray-300 rounded no-underline text-gray-800 hover:bg-gray-200 transition-colors">
                                     <span class="att-icon mr-3 w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
                                           :class="getFileTypeClass(att.filename, att.mime)"
@@ -356,10 +368,15 @@
                     return filename.split('.').pop().toUpperCase().substring(0, 3);
                 },
 
+                isImage(filename, mime) {
+                    const ext = filename.split('.').pop().toLowerCase();
+                    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (mime && mime.startsWith('image/'));
+                },
+
                 getFileTypeClass(filename, mime) {
                     const ext = filename.split('.').pop().toLowerCase();
                     if (['pdf'].includes(ext)) return 'type-pdf';
-                    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (mime && mime.startsWith('image/'))) return 'type-image';
+                    if (this.isImage(filename, mime)) return 'type-image';
                     if (['doc', 'docx', 'rtf'].includes(ext)) return 'type-word';
                     if (['xls', 'xlsx', 'csv'].includes(ext)) return 'type-excel';
                     if (['ppt', 'pptx'].includes(ext)) return 'type-powerpoint';
@@ -369,10 +386,71 @@
                     return 'type-default';
                 },
 
-                getFolderLevel(path) {
-                    // Count occurrences of delimiter (assuming '/' or '.')
-                    // Adjust based on your delimiter
-                    return (path.match(/\//g) || []).length;
+                hasImageAttachments(attachments) {
+                    if (!attachments) return false;
+                    // Only show images that are NOT inline
+                    return attachments.some(att => this.isImage(att.filename, att.mime) && !att.content_id);
+                },
+
+                getImageAttachments(attachments) {
+                    if (!attachments) return [];
+                    // Only show images that are NOT inline
+                    return attachments.filter(att => this.isImage(att.filename, att.mime) && !att.content_id);
+                },
+
+                getNonImageAttachments(attachments) {
+                    if (!attachments) return [];
+                    // Show everything that is NOT an image (inline or not, usually docs are not inline in this context)
+                    // Or strictly: not image OR (image AND inline but failed to render? no, keep simple)
+                    return attachments.filter(att => !this.isImage(att.filename, att.mime));
+                },
+
+                hasNonImageAttachments(attachments) {
+                    if (!attachments) return false;
+                    return attachments.some(att => !this.isImage(att.filename, att.mime));
+                },
+
+                processContent(content, attachments) {
+                    if (!content) return '';
+                    if (!attachments || attachments.length === 0) return content;
+
+                    let processedContent = content;
+                    attachments.forEach(att => {
+                        if (att.content_id) {
+                            // Clean CID (remove < >)
+                            const cid = att.content_id.replace(/^<|>$/g, '');
+                            // Replace all occurrences of cid:CID with the download URL
+                            // Handle both cid:CID and cid:CID@domain
+                            const regex = new RegExp('cid:' + cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                            processedContent = processedContent.replace(regex, att.download_url);
+                        }
+                    });
+                    return processedContent;
+                },
+
+                getFolderLevel(name) {
+                    // Assuming folders are separated by '.' or '/'
+                    // Adjust this logic based on your folder names are structured
+                    // Example: "INBOX.Archive" -> level 1
+                    const separators = ['.', '/'];
+                    let level = 0;
+                    for (const sep of separators) {
+                        const count = (name.match(new RegExp('\\' + sep, 'g')) || []).length;
+                        if (count > level) level = count;
+                    }
+                    return level;
+                },
+
+                getFolderName(name) {
+                    // Returns only the last part of the folder name
+                    // Example: "INBOX.Archive" -> "Archive"
+                    const separators = ['.', '/'];
+                    for (const sep of separators) {
+                        if (name.includes(sep)) {
+                            return name.split(sep).pop();
+                        }
+                    }
+                    return name;
                 }
             }
         }

@@ -274,6 +274,7 @@ class ImapSynchronizer
                 $mime = $attachment->getMimeType();
                 $size = $attachment->getSize();
                 $partNumber = $attachment->getPartNumber();
+                $contentId = $attachment->getContentId(); // Get Content-ID
 
                 $connection = $this->attachmentResource->getConnection();
                 $select = $connection->select()->from($this->attachmentResource->getMainTable())
@@ -287,6 +288,7 @@ class ImapSynchronizer
                     $attModel->setData('mime_type', $mime);
                     $attModel->setData('size', $size);
                     $attModel->setData('part_number', $partNumber);
+                    $attModel->setData('content_id', $contentId); // Save Content-ID
                     $this->attachmentResource->save($attModel);
                 }
             }
