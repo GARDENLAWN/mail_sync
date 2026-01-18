@@ -14,6 +14,7 @@
             <template x-for="folder in folders" :key="folder.id">
                 <div class="mailsync-folder-item"
                      :class="{ 'active': activeFolderId === folder.id }"
+                     :style="'padding-left: ' + (1.5 + (getFolderLevel(folder.path) * 1.5)) + 'rem'"
                      @click="selectFolder(folder.id)">
                     <span class="folder-icon">📁</span>
                     <span x-text="folder.name"></span>
@@ -67,8 +68,22 @@
                             <div class="sender-name font-bold text-lg text-gray-800" x-text="activeMessage.sender"></div>
                             <div class="message-date text-gray-500 text-sm" x-text="activeMessage.date"></div>
                         </div>
-                        <div class="message-actions">
+                        <div class="message-actions flex gap-2 relative">
                             <button class="action-btn secondary" @click="replyToMessage()">Reply</button>
+
+                            <!-- Move Button & Dropdown -->
+                            <div class="relative" @click.away="showMoveDropdown = false">
+                                <button class="action-btn secondary" @click="showMoveDropdown = !showMoveDropdown">Move</button>
+                                <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-64 overflow-y-auto" x-show="showMoveDropdown" style="display: none;">
+                                    <template x-for="folder in folders" :key="folder.id">
+                                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                             x-show="folder.id !== activeFolderId"
+                                             @click="moveMessage(folder.id)">
+                                            <span x-text="folder.name"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -165,6 +180,7 @@
                 composeBody: '',
                 filesToUpload: [],
                 sending: false,
+                showMoveDropdown: false,
 
                 init() {
                     this.fetchFolders();
@@ -234,7 +250,6 @@
                     for (let i = 0; i < files.length; i++) {
                         this.filesToUpload.push(files[i]);
                     }
-                    // Reset input so same file can be selected again if needed
                     event.target.value = '';
                 },
 
@@ -265,11 +280,8 @@
                     })
                     .then(response => {
                         if (response.redirected) {
-                            // Magento controller redirects on success/error
-                            // We can reload the page or handle it better if controller returned JSON
                             window.location.href = response.url;
                         } else {
-                            // Fallback reload
                             window.location.reload();
                         }
                     })
@@ -277,6 +289,40 @@
                         console.error('Error:', error);
                         alert('Error sending message');
                         this.sending = false;
+                    });
+                },
+
+                moveMessage(targetFolderId) {
+                    if (!confirm('Are you sure you want to move this message?')) return;
+
+                    this.showMoveDropdown = false;
+                    this.loadingContent = true;
+
+                    const formData = new FormData();
+                    formData.append('form_key', '<?= $block->getFormKey() ?>');
+                    formData.append('message_id', this.activeMessageId);
+                    formData.append('folder_id', targetFolderId);
+
+                    fetch('<?= $block->getUrl('gardenlawn_mailsync/api/move') ?>', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            this.messages = this.messages.filter(m => m.id !== this.activeMessageId);
+                            this.activeMessageId = null;
+                            this.activeMessage = null;
+                            this.loadingContent = false;
+                        } else {
+                            alert('Error moving message: ' + (data.error || 'Unknown error'));
+                            this.loadingContent = false;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error moving message');
+                        this.loadingContent = false;
                     });
                 },
 
@@ -321,6 +367,12 @@
                     if (['php', 'js', 'css', 'html', 'xml', 'json'].includes(ext)) return 'type-code';
                     if (['txt', 'md'].includes(ext)) return 'type-text';
                     return 'type-default';
+                },
+
+                getFolderLevel(path) {
+                    // Count occurrences of delimiter (assuming '/' or '.')
+                    // Adjust based on your delimiter
+                    return (path.match(/\//g) || []).length;
                 }
             }
         }

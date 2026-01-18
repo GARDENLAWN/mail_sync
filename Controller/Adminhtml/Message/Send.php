@@ -14,6 +14,7 @@ use GardenLawn\MailSync\Model\Message\Status;
 use DateTimeImmutable;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Filesystem;
+use GardenLawn\MailSync\Model\Queue\Publisher;
 
 class Send extends Action
 {
@@ -25,7 +26,8 @@ class Send extends Action
         private readonly Config $config,
         private readonly MessageFactory $messageFactory,
         private readonly MessageResource $messageResource,
-        private readonly Filesystem $filesystem
+        private readonly Filesystem $filesystem,
+        private readonly Publisher $publisher
     ) {
         parent::__construct($context);
     }
@@ -34,8 +36,6 @@ class Send extends Action
     {
         $id = $this->getRequest()->getParam('id');
         $body = $this->getRequest()->getParam('reply_body');
-
-        // New fields for composing
         $to = $this->getRequest()->getParam('to');
         $subject = $this->getRequest()->getParam('subject');
 
@@ -45,7 +45,6 @@ class Send extends Action
         }
 
         try {
-            // Handle Attachments
             $attachments = [];
             $files = $this->getRequest()->getFiles('reply_attachment');
 
@@ -77,7 +76,6 @@ class Send extends Action
             $account = $this->config->getAccount();
 
             if ($id) {
-                // REPLY MODE
                 $messageRecord = $this->messageFactory->create();
                 $this->messageResource->load($messageRecord, $id);
 
@@ -93,7 +91,7 @@ class Send extends Action
                     content: (string)$messageRecord->getContent(),
                     status: Status::tryFrom($messageRecord->getStatus()) ?? Status::READ,
                     folderId: (int)$messageRecord->getFolderId(),
-                    type: \GardenLawn\MailSync\Model\Message\Type::PERSONAL, // Default or fetch from DB if needed
+                    type: \GardenLawn\MailSync\Model\Message\Type::PERSONAL,
                     messageId: (string)$messageRecord->getMessageId()
                 );
 
@@ -101,7 +99,6 @@ class Send extends Action
                 $this->messageManager->addSuccessMessage(__('Reply sent successfully.'));
 
             } else {
-                // NEW MESSAGE MODE
                 if (!$to || !$subject) {
                     throw new \Exception(__('Recipient and Subject are required for new messages.'));
                 }
@@ -109,6 +106,9 @@ class Send extends Action
                 $this->mailSender->send($account, $to, $subject, $body, $attachments);
                 $this->messageManager->addSuccessMessage(__('Message sent successfully.'));
             }
+
+            // Trigger async sync
+            $this->publisher->publish();
 
         } catch (\Exception $e) {
             $this->messageManager->addErrorMessage(__('Error sending message: %1', $e->getMessage()));

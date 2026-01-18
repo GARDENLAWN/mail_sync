@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/consumer.xsd">
+    <consumer name="gardenlawn_mail_sync_consumer" queue="gardenlawn_mail_sync" connection="db" handler="GardenLawn\MailSync\Model\Queue\Consumer::process"/>
+</config>

@@ -35,21 +35,19 @@ class ImapSynchronizer
 
     public function sync(Account $account, ?OutputInterface $output = null, bool $foldersOnly = false): void
     {
-        // Step 1: Fetch Folder List
+        // Step 1: Fetch Folder List (Recursive)
         $folderList = [];
         try {
             $client = $this->createClient($account);
             $client->connect();
             if ($output) $output->writeln("Connected. Fetching folder list...");
 
-            $folders = $client->getFolders();
-            foreach ($folders as $f) {
-                $folderList[] = [
-                    'name' => $f->name,
-                    'path' => $f->path,
-                    'delimiter' => $f->delimiter
-                ];
-            }
+            // Get folders hierarchically
+            $folders = $client->getFolders(true);
+
+            // Flatten the structure
+            $folderList = $this->flattenFolders($folders);
+
             $client->disconnect();
         } catch (\Exception $e) {
             if ($output) $output->writeln("Error fetching folder list: " . $e->getMessage());
@@ -83,13 +81,28 @@ class ImapSynchronizer
                 $client = $this->createClient($account);
                 $client->connect();
 
-                // Find folder object safely
+                // Find folder object safely (iterate flat list if needed, or use getFolder)
+                // Since we have the path, we can try getFolder directly, but iteration is safer for encoding issues
                 $activeFolder = null;
-                foreach ($client->getFolders() as $f) {
-                    if ($f->path === $folderPath) {
-                        $activeFolder = $f;
-                        break;
+
+                // We need to fetch all folders again to find the object
+                // This is inefficient but safe. Optimization: fetch flat list once if possible.
+                // Webklex doesn't have getFolderByPath easily without fetching.
+
+                // Try direct fetch first
+                try {
+                    $activeFolder = $client->getFolder($folderPath);
+                } catch (\Exception $e) {
+                    // Fallback: iterate
+                    $allFolders = $this->flattenFolders($client->getFolders(true));
+                    foreach ($allFolders as $fData) {
+                        // We need the OBJECT, but flattenFolders returns array.
+                        // We need a way to get the object.
+                        // Let's change flattenFolders to return objects or iterate recursively here.
                     }
+
+                    // Actually, let's just iterate recursively on the client folders to find the match
+                    $activeFolder = $this->findFolderByPath($client->getFolders(true), $folderPath);
                 }
 
                 if (!$activeFolder) {
@@ -103,10 +116,8 @@ class ImapSynchronizer
 
                 if ($output) $output->writeln("  Fetching UIDs...");
 
-                // Get all UIDs from server
                 $serverUids = $client->getConnection()->search(['ALL'])->validatedData();
 
-                // Prune deleted messages
                 $this->pruneDeletedMessages((int)$dbFolder->getId(), $serverUids, $output);
 
                 if (empty($serverUids)) {
@@ -115,10 +126,19 @@ class ImapSynchronizer
                     continue;
                 }
 
-                rsort($serverUids);
-                $uidsToSync = array_slice($serverUids, 0, 20);
+                $dbUids = $this->messageRepository->getUidsByFolderId((int)$dbFolder->getId());
+                $missingUids = array_diff($serverUids, $dbUids);
 
-                if ($output) $output->writeln("  Found " . count($serverUids) . " messages. Syncing " . count($uidsToSync) . " newest.");
+                if (empty($missingUids)) {
+                    if ($output) $output->writeln("  No new messages.");
+                    $client->disconnect();
+                    continue;
+                }
+
+                rsort($missingUids);
+                $uidsToSync = array_slice($missingUids, 0, 50);
+
+                if ($output) $output->writeln("  Found " . count($missingUids) . " new messages. Syncing " . count($uidsToSync) . " in this run.");
 
                 foreach ($uidsToSync as $uid) {
                     try {
@@ -133,12 +153,7 @@ class ImapSynchronizer
                             try {
                                 $client->connect();
                                 $client->openFolder($folderPath);
-                                foreach ($client->getFolders() as $f) {
-                                    if ($f->path === $folderPath) {
-                                        $activeFolder = $f;
-                                        break;
-                                    }
-                                }
+                                $activeFolder = $this->findFolderByPath($client->getFolders(true), $folderPath);
                             } catch (\Exception $reconnectEx) {
                                 if ($output) $output->writeln("    Reconnect failed: " . $reconnectEx->getMessage());
                                 break;
@@ -158,11 +173,47 @@ class ImapSynchronizer
         }
     }
 
+    /**
+     * Recursively flatten folder collection to array of data
+     */
+    private function flattenFolders($folders): array
+    {
+        $result = [];
+        foreach ($folders as $folder) {
+            $result[] = [
+                'name' => $folder->name,
+                'path' => $folder->path,
+                'delimiter' => $folder->delimiter
+            ];
+
+            if ($folder->hasChildren()) {
+                $result = array_merge($result, $this->flattenFolders($folder->children));
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Recursively find folder object by path
+     */
+    private function findFolderByPath($folders, string $path)
+    {
+        foreach ($folders as $folder) {
+            if ($folder->path === $path) {
+                return $folder;
+            }
+
+            if ($folder->hasChildren()) {
+                $found = $this->findFolderByPath($folder->children, $path);
+                if ($found) return $found;
+            }
+        }
+        return null;
+    }
+
     private function pruneDeletedMessages(int $folderId, array $serverUids, ?OutputInterface $output): void
     {
         $dbUids = $this->messageRepository->getUidsByFolderId($folderId);
-
-        // Find UIDs that are in DB but not on Server
         $uidsToDelete = array_diff($dbUids, $serverUids);
 
         if (!empty($uidsToDelete)) {
