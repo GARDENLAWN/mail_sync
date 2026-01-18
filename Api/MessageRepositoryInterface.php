@@ -33,4 +33,21 @@ interface MessageRepositoryInterface
      * @return void
      */
     public function updateStatus(int $uid, int $folderId, Status $status): void;
+
+    /**
+     * Get all UIDs for a specific folder
+     *
+     * @param int $folderId
+     * @return array
+     */
+    public function getUidsByFolderId(int $folderId): array;
+
+    /**
+     * Delete messages by UIDs and Folder ID
+     *
+     * @param array $uids
+     * @param int $folderId
+     * @return void
+     */
+    public function deleteByUids(array $uids, int $folderId): void;
 }

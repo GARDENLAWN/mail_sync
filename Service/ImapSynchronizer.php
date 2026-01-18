@@ -103,26 +103,27 @@ class ImapSynchronizer
 
                 if ($output) $output->writeln("  Fetching UIDs...");
 
-                $uids = $client->getConnection()->search(['ALL'])->validatedData();
+                // Get all UIDs from server
+                $serverUids = $client->getConnection()->search(['ALL'])->validatedData();
 
-                if (empty($uids)) {
+                // Prune deleted messages
+                $this->pruneDeletedMessages((int)$dbFolder->getId(), $serverUids, $output);
+
+                if (empty($serverUids)) {
                     if ($output) $output->writeln("  Folder is empty.");
                     $client->disconnect();
                     continue;
                 }
 
-                rsort($uids);
-                $uidsToSync = array_slice($uids, 0, 20);
+                rsort($serverUids);
+                $uidsToSync = array_slice($serverUids, 0, 20);
 
-                if ($output) $output->writeln("  Found " . count($uids) . " messages. Syncing " . count($uidsToSync) . " newest.");
+                if ($output) $output->writeln("  Found " . count($serverUids) . " messages. Syncing " . count($uidsToSync) . " newest.");
 
                 foreach ($uidsToSync as $uid) {
                     try {
-                        // Use the active folder object we found earlier
                         $message = $activeFolder->query()->getMessageByUid($uid);
-
                         $this->processMessage($message, $dbFolder, $output);
-
                         usleep(50000);
                     } catch (\Exception $e) {
                         if ($output) $output->writeln("    Error processing message UID $uid: " . $e->getMessage());
@@ -132,7 +133,6 @@ class ImapSynchronizer
                             try {
                                 $client->connect();
                                 $client->openFolder($folderPath);
-                                // Re-fetch active folder object after reconnect
                                 foreach ($client->getFolders() as $f) {
                                     if ($f->path === $folderPath) {
                                         $activeFolder = $f;
@@ -155,6 +155,19 @@ class ImapSynchronizer
             }
 
             sleep(1);
+        }
+    }
+
+    private function pruneDeletedMessages(int $folderId, array $serverUids, ?OutputInterface $output): void
+    {
+        $dbUids = $this->messageRepository->getUidsByFolderId($folderId);
+
+        // Find UIDs that are in DB but not on Server
+        $uidsToDelete = array_diff($dbUids, $serverUids);
+
+        if (!empty($uidsToDelete)) {
+            if ($output) $output->writeln("  Deleting " . count($uidsToDelete) . " messages from DB (not on server)...");
+            $this->messageRepository->deleteByUids($uidsToDelete, $folderId);
         }
     }
 

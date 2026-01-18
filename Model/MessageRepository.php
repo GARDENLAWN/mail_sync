@@ -7,6 +7,7 @@ use GardenLawn\MailSync\Api\MessageRepositoryInterface;
 use GardenLawn\MailSync\Model\Message\Status;
 use GardenLawn\MailSync\Model\ResourceModel\Message as MessageResource;
 use Magento\Framework\Exception\CouldNotSaveException;
+use Magento\Framework\Exception\CouldNotDeleteException;
 use Exception;
 use function Magento\Framework\__;
 
@@ -28,7 +29,6 @@ class MessageRepository implements MessageRepositoryInterface
             $connection = $this->resource->getConnection();
             $tableName = $this->resource->getMainTable();
 
-            // Check if message already exists using unique constraint (uid, folder_id)
             $select = $connection->select()
                 ->from($tableName, 'entity_id')
                 ->where('uid = ?', $message->uid)
@@ -76,6 +76,43 @@ class MessageRepository implements MessageRepositoryInterface
         } catch (Exception $exception) {
             throw new CouldNotSaveException(
                 __('Could not update the message status: %1', $exception->getMessage()),
+                $exception
+            );
+        }
+    }
+
+    public function getUidsByFolderId(int $folderId): array
+    {
+        $connection = $this->resource->getConnection();
+        $tableName = $this->resource->getMainTable();
+
+        $select = $connection->select()
+            ->from($tableName, 'uid')
+            ->where('folder_id = ?', $folderId);
+
+        return $connection->fetchCol($select);
+    }
+
+    public function deleteByUids(array $uids, int $folderId): void
+    {
+        if (empty($uids)) {
+            return;
+        }
+
+        try {
+            $connection = $this->resource->getConnection();
+            $tableName = $this->resource->getMainTable();
+
+            $connection->delete(
+                $tableName,
+                [
+                    'folder_id = ?' => $folderId,
+                    'uid IN (?)' => $uids
+                ]
+            );
+        } catch (Exception $exception) {
+            throw new CouldNotDeleteException(
+                __('Could not delete messages: %1', $exception->getMessage()),
                 $exception
             );
         }
