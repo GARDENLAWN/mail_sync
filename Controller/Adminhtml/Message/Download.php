@@ -15,6 +15,7 @@ use GardenLawn\MailSync\Model\ResourceModel\Folder as FolderResource;
 use Webklex\PHPIMAP\ClientManager;
 use Magento\Framework\App\Response\Http\FileFactory;
 use Magento\Framework\App\Filesystem\DirectoryList;
+use Magento\Framework\Exception\LocalizedException;
 
 class Download extends Action
 {
@@ -49,7 +50,7 @@ class Download extends Action
             $this->attachmentResource->load($attachment, $attachmentId);
 
             if (!$attachment->getId()) {
-                throw new \Exception(__('Attachment not found.'));
+                throw new LocalizedException(__('Attachment not found.'));
             }
 
             // Load Message
@@ -75,24 +76,37 @@ class Download extends Action
             $client->connect();
 
             // Get Folder and Message
-            $imapFolder = $client->getFolder($folder->getPath());
+            // Use robust folder finding
+            $imapFolder = null;
+            foreach ($client->getFolders() as $f) {
+                if ($f->path === $folder->getPath()) {
+                    $imapFolder = $f;
+                    break;
+                }
+            }
+
+            if (!$imapFolder) {
+                // Try direct fetch if iteration failed (unlikely but fallback)
+                try {
+                    $imapFolder = $client->getFolder($folder->getPath());
+                } catch (\Exception $e) {
+                    throw new LocalizedException(__('Folder not found on server.'));
+                }
+            }
 
             // Fetch specific message by UID
-            $query = $imapFolder->query()->setFetchBody(false)->where('UID', $message->getUid());
-            $imapMessage = $query->get()->first();
+            $imapMessage = $imapFolder->query()->getMessageByUid($message->getUid());
 
             if (!$imapMessage) {
-                throw new \Exception(__('Message not found on server.'));
+                throw new LocalizedException(__('Message not found on server.'));
             }
 
             // Find the attachment part
-            // Webklex allows getting attachment by part number if we iterate or use specific methods.
-            // Since we stored part_number, we can try to find it.
-
             $targetAttachment = null;
             $attachments = $imapMessage->getAttachments();
 
             foreach ($attachments as $att) {
+                // Compare part number or filename/size as fallback
                 if ($att->getPartNumber() == $attachment->getPartNumber()) {
                     $targetAttachment = $att;
                     break;
@@ -100,7 +114,17 @@ class Download extends Action
             }
 
             if (!$targetAttachment) {
-                throw new \Exception(__('Attachment content not found on server.'));
+                // Fallback: try matching by filename and size
+                foreach ($attachments as $att) {
+                    if ($att->getName() == $attachment->getFilename() && $att->getSize() == $attachment->getSize()) {
+                        $targetAttachment = $att;
+                        break;
+                    }
+                }
+            }
+
+            if (!$targetAttachment) {
+                throw new LocalizedException(__('Attachment content not found on server.'));
             }
 
             // Get content

@@ -6,6 +6,7 @@ namespace GardenLawn\MailSync\Controller\Adminhtml\Api;
 use Magento\Backend\App\Action;
 use Magento\Backend\App\Action\Context;
 use Magento\Framework\Controller\Result\JsonFactory;
+use Magento\Framework\Escaper;
 use GardenLawn\MailSync\Model\MessageFactory;
 use GardenLawn\MailSync\Model\ResourceModel\Message as MessageResource;
 use GardenLawn\MailSync\Model\ResourceModel\Attachment\CollectionFactory as AttachmentCollectionFactory;
@@ -17,7 +18,8 @@ class Message extends Action
         private readonly JsonFactory $jsonFactory,
         private readonly MessageFactory $messageFactory,
         private readonly MessageResource $messageResource,
-        private readonly AttachmentCollectionFactory $attachmentCollectionFactory
+        private readonly AttachmentCollectionFactory $attachmentCollectionFactory,
+        private readonly Escaper $escaper
     ) {
         parent::__construct($context);
     }
@@ -40,25 +42,34 @@ class Message extends Action
         foreach ($attachmentCollection as $att) {
             $attachments[] = [
                 'id' => (int)$att->getId(),
-                'filename' => $att->getFilename(),
+                'filename' => $this->ensureUtf8($att->getFilename()),
                 'size' => $att->getSize(),
                 'mime' => $att->getMimeType(),
                 'download_url' => $this->getUrl('gardenlawn_mailsync/message/download', ['attachment_id' => $att->getId()])
             ];
         }
 
+        $subject = $this->ensureUtf8($message->getSubject());
+        $sender = $this->ensureUtf8($message->getSender());
+        $content = $this->ensureUtf8((string)$message->getContent());
+
         $data = [
             'id' => (int)$message->getId(),
             'uid' => (int)$message->getUid(),
-            'subject' => $message->getSubject(),
-            'sender' => $message->getSender(),
+            'subject' => $subject,
+            'sender' => $sender,
             'date' => $message->getDate(),
-            'content' => nl2br($this->_escaper->escapeHtml($message->getContent())), // Safe HTML
+            'content' => nl2br($this->escaper->escapeHtml($content)), // Safe HTML
             'status' => $message->getStatus(),
             'folder_id' => (int)$message->getFolderId(),
             'attachments' => $attachments
         ];
 
         return $this->jsonFactory->create()->setData($data);
+    }
+
+    private function ensureUtf8(string $string): string
+    {
+        return mb_convert_encoding($string, 'UTF-8', 'UTF-8');
     }
 }

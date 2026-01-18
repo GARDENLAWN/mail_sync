@@ -28,20 +28,33 @@ class Messages extends Action
         }
 
         $collection->setOrder('date', 'DESC');
-        $collection->setPageSize(50); // Limit for performance
+        $collection->setPageSize(50);
 
         $messages = [];
         foreach ($collection as $message) {
+            $content = (string)$message->getContent();
+            $preview = substr(strip_tags($content), 0, 100) . '...';
+
+            // Ensure UTF-8
+            $subject = $this->ensureUtf8($message->getSubject());
+            $sender = $this->ensureUtf8($message->getSender());
+            $preview = $this->ensureUtf8($preview);
+
             $messages[] = [
                 'id' => (int)$message->getId(),
-                'subject' => $message->getSubject(),
-                'sender' => $message->getSender(),
+                'subject' => $subject,
+                'sender' => $sender,
                 'date' => $message->getDate(),
                 'status' => $message->getStatus(),
-                'preview' => substr(strip_tags((string)$message->getContent()), 0, 100) . '...'
+                'preview' => $preview
             ];
         }
 
         return $this->jsonFactory->create()->setData($messages);
+    }
+
+    private function ensureUtf8(string $string): string
+    {
+        return mb_convert_encoding($string, 'UTF-8', 'UTF-8');
     }
 }

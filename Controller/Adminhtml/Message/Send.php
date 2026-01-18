@@ -35,8 +35,12 @@ class Send extends Action
         $id = $this->getRequest()->getParam('id');
         $body = $this->getRequest()->getParam('reply_body');
 
-        if (!$id || !$body) {
-            $this->messageManager->addErrorMessage(__('Invalid request.'));
+        // New fields for composing
+        $to = $this->getRequest()->getParam('to');
+        $subject = $this->getRequest()->getParam('subject');
+
+        if (!$body) {
+            $this->messageManager->addErrorMessage(__('Message body is required.'));
             return $this->_redirect('*/*/index');
         }
 
@@ -45,10 +49,8 @@ class Send extends Action
             $attachments = [];
             $files = $this->getRequest()->getFiles('reply_attachment');
 
-            // Check if multiple files were uploaded (array structure differs)
             if ($files && isset($files['name'])) {
                 if (is_array($files['name'])) {
-                    // Multiple files
                     $count = count($files['name']);
                     for ($i = 0; $i < $count; $i++) {
                         if ($files['error'][$i] === 0 && $files['size'][$i] > 0) {
@@ -61,7 +63,6 @@ class Send extends Action
                         }
                     }
                 } else {
-                    // Single file
                     if ($files['error'] === 0 && $files['size'] > 0) {
                         $content = file_get_contents($files['tmp_name']);
                         $attachments[] = [
@@ -73,32 +74,44 @@ class Send extends Action
                 }
             }
 
-            // Load original message
-            $messageRecord = $this->messageFactory->create();
-            $this->messageResource->load($messageRecord, $id);
-
-            if (!$messageRecord->getId()) {
-                throw new \Exception(__('Message not found.'));
-            }
-
-            $originalMessageDto = new MessageDto(
-                uid: (int)$messageRecord->getUid(),
-                subject: (string)$messageRecord->getSubject(),
-                sender: (string)$messageRecord->getSender(),
-                date: new DateTimeImmutable($messageRecord->getDate()),
-                content: (string)$messageRecord->getContent(),
-                status: Status::tryFrom($messageRecord->getStatus()) ?? Status::READ,
-                folderId: (int)$messageRecord->getFolderId(),
-                messageId: (string)$messageRecord->getMessageId()
-            );
-
             $account = $this->config->getAccount();
 
-            $this->mailSender->reply($account, $originalMessageDto, $body, $attachments);
+            if ($id) {
+                // REPLY MODE
+                $messageRecord = $this->messageFactory->create();
+                $this->messageResource->load($messageRecord, $id);
 
-            $this->messageManager->addSuccessMessage(__('Reply sent successfully.'));
+                if (!$messageRecord->getId()) {
+                    throw new \Exception(__('Original message not found.'));
+                }
+
+                $originalMessageDto = new MessageDto(
+                    uid: (int)$messageRecord->getUid(),
+                    subject: (string)$messageRecord->getSubject(),
+                    sender: (string)$messageRecord->getSender(),
+                    date: new DateTimeImmutable($messageRecord->getDate()),
+                    content: (string)$messageRecord->getContent(),
+                    status: Status::tryFrom($messageRecord->getStatus()) ?? Status::READ,
+                    folderId: (int)$messageRecord->getFolderId(),
+                    type: \GardenLawn\MailSync\Model\Message\Type::PERSONAL, // Default or fetch from DB if needed
+                    messageId: (string)$messageRecord->getMessageId()
+                );
+
+                $this->mailSender->reply($account, $originalMessageDto, $body, $attachments);
+                $this->messageManager->addSuccessMessage(__('Reply sent successfully.'));
+
+            } else {
+                // NEW MESSAGE MODE
+                if (!$to || !$subject) {
+                    throw new \Exception(__('Recipient and Subject are required for new messages.'));
+                }
+
+                $this->mailSender->send($account, $to, $subject, $body, $attachments);
+                $this->messageManager->addSuccessMessage(__('Message sent successfully.'));
+            }
+
         } catch (\Exception $e) {
-            $this->messageManager->addErrorMessage(__('Error sending reply: %1', $e->getMessage()));
+            $this->messageManager->addErrorMessage(__('Error sending message: %1', $e->getMessage()));
         }
 
         return $this->_redirect('*/*/index');
