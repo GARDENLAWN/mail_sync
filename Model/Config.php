@@ -28,9 +28,9 @@ class Config
 
     public function getAccount(): Account
     {
-        $username = (string)$this->scopeConfig->getValue(self::XML_PATH_USERNAME);
-        $password = (string)$this->scopeConfig->getValue(self::XML_PATH_PASSWORD);
-        $senderName = (string)$this->scopeConfig->getValue(self::XML_PATH_SENDER_NAME);
+        $username = trim((string)$this->scopeConfig->getValue(self::XML_PATH_USERNAME));
+        $password = trim((string)$this->scopeConfig->getValue(self::XML_PATH_PASSWORD));
+        $senderName = trim((string)$this->scopeConfig->getValue(self::XML_PATH_SENDER_NAME));
 
         if ($password) {
              $password = $this->encryptor->decrypt($password);
@@ -40,10 +40,10 @@ class Config
             username: $username,
             password: $password,
             senderName: $senderName ?: $username,
-            imapHost: (string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_HOST),
+            imapHost: trim((string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_HOST)),
             imapPort: (int)$this->scopeConfig->getValue(self::XML_PATH_IMAP_PORT),
             imapEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_ENCRYPTION),
-            smtpHost: (string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_HOST),
+            smtpHost: trim((string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_HOST)),
             smtpPort: (int)$this->scopeConfig->getValue(self::XML_PATH_SMTP_PORT),
             smtpEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_ENCRYPTION)
         );

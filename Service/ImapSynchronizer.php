@@ -25,7 +25,7 @@ class ImapSynchronizer
     ) {
     }
 
-    public function sync(Account $account, ?OutputInterface $output = null): void
+    public function sync(Account $account, ?OutputInterface $output = null, bool $foldersOnly = false): void
     {
         $cm = new ClientManager();
 
@@ -54,7 +54,14 @@ class ImapSynchronizer
                 $imapFolder->delimiter
             );
 
+            if ($foldersOnly) {
+                continue;
+            }
+
             $query = $imapFolder->messages()->all();
+            // Limit for dev/test to avoid huge sync times if needed, or remove for prod
+            // $query->limit(50);
+
             $messages = $query->get();
 
             if ($output) $output->writeln("  Found " . count($messages) . " messages.");
@@ -107,15 +114,9 @@ class ImapSynchronizer
                     // Determine Message Type
                     $type = Type::PERSONAL;
 
-                    // Check headers for X-Magento-Type
-                    // Webklex Header collection
                     $headers = $imapMessage->getHeaders();
-                    // Note: Webklex headers might be accessed differently depending on version.
-                    // Usually $headers->get('x-magento-type') returns a Header object or string.
-
                     $magentoTypeHeader = $headers->get('x-magento-type');
                     if ($magentoTypeHeader) {
-                        // It might be an object or array or string
                         $headerValue = is_object($magentoTypeHeader) ? $magentoTypeHeader->getValue() : $magentoTypeHeader;
                         if (is_string($headerValue) && strtolower($headerValue) === 'system') {
                             $type = Type::SYSTEM;
