@@ -48,7 +48,8 @@ class MessageRepository implements MessageRepositoryInterface
                 'date' => $message->date->format('Y-m-d H:i:s'),
                 'content' => $message->content,
                 'status' => $message->status->value,
-                'folder_id' => $message->folderId
+                'folder_id' => $message->folderId,
+                'message_type' => $message->type->value
             ];
 
             $connection->insert($tableName, $data);

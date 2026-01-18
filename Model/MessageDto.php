@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace GardenLawn\MailSync\Model;
 
 use GardenLawn\MailSync\Model\Message\Status;
+use GardenLawn\MailSync\Model\Message\Type;
 use DateTimeImmutable;
 
 readonly class MessageDto
@@ -16,6 +17,7 @@ readonly class MessageDto
         public string $content,
         public Status $status,
         public int $folderId,
+        public Type $type,
         public ?string $messageId = null
     ) {
     }

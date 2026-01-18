@@ -32,7 +32,16 @@
         </settings>
         <bookmark name="bookmarks"/>
         <columnsControls name="columns_controls"/>
-        <filters name="listing_filters"/>
+        <filters name="listing_filters">
+            <filterSelect name="message_type" provider="${ $.parentName }">
+                <settings>
+                    <options class="GardenLawn\MailSync\Model\Config\Source\MessageType"/>
+                    <caption translate="true">All Types</caption>
+                    <label translate="true">Type</label>
+                    <dataScope>message_type</dataScope>
+                </settings>
+            </filterSelect>
+        </filters>
         <paging name="listing_paging"/>
     </listingToolbar>
     <columns name="gardenlawn_mailsync_message_columns">
@@ -63,6 +72,14 @@
                 <filter>textRange</filter>
                 <label translate="true">ID</label>
                 <sorting>asc</sorting>
+            </settings>
+        </column>
+        <column name="message_type">
+            <settings>
+                <filter>select</filter>
+                <dataType>select</dataType>
+                <options class="GardenLawn\MailSync\Model\Config\Source\MessageType"/>
+                <label translate="true">Type</label>
             </settings>
         </column>
         <column name="subject">

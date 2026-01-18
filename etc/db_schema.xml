@@ -25,6 +25,7 @@
         <column xsi:type="datetime" name="date" nullable="false" comment="Date"/>
         <column xsi:type="mediumtext" name="content" nullable="true" comment="Content"/>
         <column xsi:type="varchar" name="status" length="32" nullable="false" default="unread" comment="Status"/>
+        <column xsi:type="varchar" name="message_type" length="32" nullable="false" default="personal" comment="Message Type (system/personal)"/>
 
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="entity_id"/>
@@ -39,6 +40,9 @@
 
         <index referenceId="GARDENLAWN_MAILSYNC_MESSAGE_STATUS" indexType="btree">
             <column name="status"/>
+        </index>
+        <index referenceId="GARDENLAWN_MAILSYNC_MESSAGE_TYPE" indexType="btree">
+            <column name="message_type"/>
         </index>
     </table>
 

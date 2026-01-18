@@ -8,6 +8,7 @@ use GardenLawn\MailSync\Api\FolderRepositoryInterface;
 use GardenLawn\MailSync\Model\Account;
 use GardenLawn\MailSync\Model\MessageDto;
 use GardenLawn\MailSync\Model\Message\Status;
+use GardenLawn\MailSync\Model\Message\Type;
 use GardenLawn\MailSync\Model\AttachmentFactory;
 use GardenLawn\MailSync\Model\ResourceModel\Attachment as AttachmentResource;
 use Webklex\PHPIMAP\ClientManager;
@@ -103,6 +104,24 @@ class ImapSynchronizer
                         }
                     }
 
+                    // Determine Message Type
+                    $type = Type::PERSONAL;
+
+                    // Check headers for X-Magento-Type
+                    // Webklex Header collection
+                    $headers = $imapMessage->getHeaders();
+                    // Note: Webklex headers might be accessed differently depending on version.
+                    // Usually $headers->get('x-magento-type') returns a Header object or string.
+
+                    $magentoTypeHeader = $headers->get('x-magento-type');
+                    if ($magentoTypeHeader) {
+                        // It might be an object or array or string
+                        $headerValue = is_object($magentoTypeHeader) ? $magentoTypeHeader->getValue() : $magentoTypeHeader;
+                        if (is_string($headerValue) && strtolower($headerValue) === 'system') {
+                            $type = Type::SYSTEM;
+                        }
+                    }
+
                     $messageDto = new MessageDto(
                         uid: $uid,
                         subject: $subject,
@@ -111,45 +130,19 @@ class ImapSynchronizer
                         content: substr($content, 0, 5000),
                         status: $status,
                         folderId: (int)$dbFolder->getId(),
+                        type: $type,
                         messageId: $messageId
                     );
 
-                    // Save message and get the ID (we need to modify repository to return ID or use model directly)
-                    // The current repository save() returns void. We need the entity_id to link attachments.
-                    // Let's assume we modify repository or use a workaround.
-                    // For now, I will fetch the ID after save or modify repository.
-                    // Best practice: Repository save should return the saved object or ID.
-
                     $savedMessageId = $this->messageRepository->saveAndReturnId($messageDto);
 
-                    // Process Attachments
                     if ($imapMessage->hasAttachments()) {
                         $attachments = $imapMessage->getAttachments();
                         foreach ($attachments as $attachment) {
-                            // Check if attachment already exists for this message
-                            // We can use a simple check or unique constraint if we had one on filename+message_id
-                            // For now, let's just insert.
-
-                            // Webklex Attachment object properties
                             $filename = $attachment->getName();
                             $mime = $attachment->getMimeType();
                             $size = $attachment->getSize();
                             $partNumber = $attachment->getPartNumber();
-
-                            // Simple check to avoid duplicates if sync runs multiple times
-                            // Ideally we should check existence before insert
-
-                            $attModel = $this->attachmentFactory->create();
-                            $attModel->setData('message_entity_id', $savedMessageId);
-                            $attModel->setData('filename', $filename);
-                            $attModel->setData('mime_type', $mime);
-                            $attModel->setData('size', $size);
-                            $attModel->setData('part_number', $partNumber);
-
-                            // We need a way to check if this specific attachment exists.
-                            // Let's assume we clear attachments on re-sync or check.
-                            // For this implementation, I'll skip the check for brevity but in prod it's needed.
-                            // Actually, let's add a check.
 
                             $connection = $this->attachmentResource->getConnection();
                             $select = $connection->select()->from($this->attachmentResource->getMainTable())
@@ -157,6 +150,12 @@ class ImapSynchronizer
                                 ->where('part_number = ?', $partNumber);
 
                             if (!$connection->fetchOne($select)) {
+                                $attModel = $this->attachmentFactory->create();
+                                $attModel->setData('message_entity_id', $savedMessageId);
+                                $attModel->setData('filename', $filename);
+                                $attModel->setData('mime_type', $mime);
+                                $attModel->setData('size', $size);
+                                $attModel->setData('part_number', $partNumber);
                                 $this->attachmentResource->save($attModel);
                             }
                         }
