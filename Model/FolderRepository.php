@@ -26,6 +26,11 @@ class FolderRepository implements FolderRepositoryInterface
         $folder = $collection->getFirstItem();
 
         if ($folder->getId()) {
+            // Update name if changed (e.g. due to decoding fix)
+            if ($folder->getName() !== $name) {
+                $folder->setName($name);
+                $this->folderResource->save($folder);
+            }
             return $folder;
         }
 
