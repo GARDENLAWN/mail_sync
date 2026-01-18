@@ -1,8 +1,7 @@
 <?xml version="1.0"?>
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <head>
-        <!-- Use Alpine from Hyva Admin module -->
-        <script src="Hyva_Admin::js/alpine.js"/>
+        <!-- Alpine is loaded via RequireJS in the template or by Hyva Admin base -->
     </head>
     <body>
         <referenceContainer name="content">

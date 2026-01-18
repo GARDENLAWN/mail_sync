@@ -120,99 +120,108 @@
 </div>
 
 <script>
-    function mailSyncApp() {
-        return {
-            folders: [],
-            messages: [],
-            activeFolderId: null,
-            activeMessageId: null,
-            activeMessage: null,
-            searchQuery: '',
-            loadingMessages: false,
-            loadingContent: false,
-            isComposing: false,
+    require(['Hyva_Admin/js/alpine'], function (Alpine) {
+        'use strict';
 
-            init() {
-                this.fetchFolders();
-            },
+        window.mailSyncApp = function() {
+            return {
+                folders: [],
+                messages: [],
+                activeFolderId: null,
+                activeMessageId: null,
+                activeMessage: null,
+                searchQuery: '',
+                loadingMessages: false,
+                loadingContent: false,
+                isComposing: false,
 
-            fetchFolders() {
-                fetch('<?= $block->getUrl('gardenlawn_mailsync/api/folders') ?>')
-                    .then(r => r.json())
-                    .then(data => {
-                        this.folders = data;
-                        if (this.folders.length > 0) {
-                            // Try to find INBOX
-                            const inbox = this.folders.find(f => f.name.toUpperCase() === 'INBOX');
-                            this.selectFolder(inbox ? inbox.id : this.folders[0].id);
-                        }
-                    });
-            },
+                init() {
+                    this.fetchFolders();
+                },
 
-            selectFolder(id) {
-                this.activeFolderId = id;
-                this.activeMessageId = null;
-                this.activeMessage = null;
-                this.isComposing = false;
-                this.loadingMessages = true;
+                fetchFolders() {
+                    fetch('<?= $block->getUrl('gardenlawn_mailsync/api/folders') ?>')
+                        .then(r => r.json())
+                        .then(data => {
+                            this.folders = data;
+                            if (this.folders.length > 0) {
+                                // Try to find INBOX
+                                const inbox = this.folders.find(f => f.name.toUpperCase() === 'INBOX');
+                                this.selectFolder(inbox ? inbox.id : this.folders[0].id);
+                            }
+                        });
+                },
 
-                fetch('<?= $block->getUrl('gardenlawn_mailsync/api/messages') ?>?folder_id=' + id)
-                    .then(r => r.json())
-                    .then(data => {
-                        this.messages = data;
-                        this.loadingMessages = false;
-                    });
-            },
+                selectFolder(id) {
+                    this.activeFolderId = id;
+                    this.activeMessageId = null;
+                    this.activeMessage = null;
+                    this.isComposing = false;
+                    this.loadingMessages = true;
 
-            selectMessage(id) {
-                this.activeMessageId = id;
-                this.isComposing = false;
-                this.loadingContent = true;
+                    fetch('<?= $block->getUrl('gardenlawn_mailsync/api/messages') ?>?folder_id=' + id)
+                        .then(r => r.json())
+                        .then(data => {
+                            this.messages = data;
+                            this.loadingMessages = false;
+                        });
+                },
 
-                fetch('<?= $block->getUrl('gardenlawn_mailsync/api/message') ?>?id=' + id)
-                    .then(r => r.json())
-                    .then(data => {
-                        this.activeMessage = data;
-                        this.loadingContent = false;
-                    });
-            },
+                selectMessage(id) {
+                    this.activeMessageId = id;
+                    this.isComposing = false;
+                    this.loadingContent = true;
 
-            replyToMessage() {
-                this.isComposing = true;
-            },
+                    fetch('<?= $block->getUrl('gardenlawn_mailsync/api/message') ?>?id=' + id)
+                        .then(r => r.json())
+                        .then(data => {
+                            this.activeMessage = data;
+                            this.loadingContent = false;
+                        });
+                },
 
-            composeEmail() {
-                // New email logic (not reply) - for now just reset
-                this.activeMessageId = null;
-                this.activeMessage = null;
-                this.isComposing = true;
-            },
+                replyToMessage() {
+                    this.isComposing = true;
+                },
 
-            get filteredMessages() {
-                if (!this.searchQuery) return this.messages;
-                const q = this.searchQuery.toLowerCase();
-                return this.messages.filter(m =>
-                    m.subject.toLowerCase().includes(q) ||
-                    m.sender.toLowerCase().includes(q)
-                );
-            },
+                composeEmail() {
+                    // New email logic (not reply) - for now just reset
+                    this.activeMessageId = null;
+                    this.activeMessage = null;
+                    this.isComposing = true;
+                },
 
-            formatDate(dateStr) {
-                const d = new Date(dateStr);
-                return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            },
+                get filteredMessages() {
+                    if (!this.searchQuery) return this.messages;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.messages.filter(m =>
+                        m.subject.toLowerCase().includes(q) ||
+                        m.sender.toLowerCase().includes(q)
+                    );
+                },
 
-            getInitials(name) {
-                return name ? name.charAt(0).toUpperCase() : '?';
-            },
+                formatDate(dateStr) {
+                    const d = new Date(dateStr);
+                    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                },
 
-            formatSize(bytes) {
-                if (bytes === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                getInitials(name) {
+                    return name ? name.charAt(0).toUpperCase() : '?';
+                },
+
+                formatSize(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                }
             }
         }
-    }
+
+        // Alpine is likely already started by Hyva_Admin/js/alpine, but we ensure window.Alpine is set if needed
+        if (typeof Alpine === 'object' && !window.Alpine) {
+            window.Alpine = Alpine;
+        }
+    });
 </script>
