@@ -83,18 +83,41 @@ class Transport implements TransportInterface
 
             $rawMessage = $message->toString();
 
-            try {
-                $sentFolder = $client->getFolder('Sent');
-            } catch (\Exception $e) {
-                try {
-                    $sentFolder = $client->getFolder('Wysłane');
-                } catch (\Exception $e) {
-                    $client->disconnect();
-                    return;
+            $sentFolder = null;
+            // List of possible folder names (decoded and encoded)
+            $targetFolderNames = [
+                'Sent',
+                'Wysłane',
+                'Elementy wysłane',
+                'Sent Items',
+                'Elementy wys&AUI-ane' // Modified UTF-7 for "Elementy wysłane"
+            ];
+
+            // Fetch all folders to iterate and check names
+            $folders = $client->getFolders();
+
+            foreach ($folders as $folder) {
+                // Check against name (usually decoded) or path (sometimes encoded)
+                if (in_array($folder->name, $targetFolderNames) || in_array($folder->path, $targetFolderNames)) {
+                    $sentFolder = $folder;
+                    break;
                 }
             }
 
-            $sentFolder->appendMessage($rawMessage, ['\Seen']);
+            if (!$sentFolder) {
+                // Fallback: Try to find any folder that looks like Sent using fuzzy search
+                foreach ($folders as $folder) {
+                    if (stripos($folder->name, 'sent') !== false || stripos($folder->name, 'wysłane') !== false) {
+                        $sentFolder = $folder;
+                        break;
+                    }
+                }
+            }
+
+            if ($sentFolder) {
+                $sentFolder->appendMessage($rawMessage, ['\Seen']);
+            }
+
             $client->disconnect();
         } catch (\Exception $e) {
             // Log error
