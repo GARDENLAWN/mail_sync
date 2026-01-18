@@ -53,13 +53,21 @@ class Message extends Action
         $sender = $this->ensureUtf8($message->getSender());
         $content = $this->ensureUtf8((string)$message->getContent());
 
+        // Sanitize HTML content but allow formatting
+        // Remove script, iframe, object, embed tags
+        $content = preg_replace('/<(script|iframe|object|embed|form)[^>]*>.*?<\/\1>/is', '', $content);
+        $content = preg_replace('/<(script|iframe|object|embed|form)[^>]*>/is', '', $content);
+
+        // Remove event handlers (on*)
+        $content = preg_replace('/\s+on[a-z]+\s*=\s*(".*?"|\'.*?\'|[^\s>]*)/i', '', $content);
+
         $data = [
             'id' => (int)$message->getId(),
             'uid' => (int)$message->getUid(),
             'subject' => $subject,
             'sender' => $sender,
             'date' => $message->getDate(),
-            'content' => nl2br($this->escaper->escapeHtml($content)), // Safe HTML
+            'content' => $content, // Return sanitized HTML
             'status' => $message->getStatus(),
             'folder_id' => (int)$message->getFolderId(),
             'attachments' => $attachments

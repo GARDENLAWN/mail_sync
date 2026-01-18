@@ -55,6 +55,18 @@
                     </field>
                 </group>
             </group>
+
+            <group id="commands" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Management Commands</label>
+                <field id="sync_button" translate="label" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Synchronize Now</label>
+                    <frontend_model>GardenLawn\MailSync\Block\System\Config\SyncButton</frontend_model>
+                </field>
+                <field id="reset_button" translate="label" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Reset Database</label>
+                    <frontend_model>GardenLawn\MailSync\Block\System\Config\ResetButton</frontend_model>
+                </field>
+            </group>
         </section>
     </system>
 </config>

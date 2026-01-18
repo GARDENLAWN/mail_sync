@@ -35,19 +35,21 @@ class ImapSynchronizer
 
     public function sync(Account $account, ?OutputInterface $output = null, bool $foldersOnly = false): void
     {
-        // Step 1: Fetch Folder List (Recursive)
+        // Step 1: Fetch Folder List
         $folderList = [];
         try {
             $client = $this->createClient($account);
             $client->connect();
             if ($output) $output->writeln("Connected. Fetching folder list...");
 
-            // Get folders hierarchically
-            $folders = $client->getFolders(true);
-
-            // Flatten the structure
-            $folderList = $this->flattenFolders($folders);
-
+            $folders = $client->getFolders();
+            foreach ($folders as $f) {
+                $folderList[] = [
+                    'name' => $f->name,
+                    'path' => $f->path,
+                    'delimiter' => $f->delimiter
+                ];
+            }
             $client->disconnect();
         } catch (\Exception $e) {
             if ($output) $output->writeln("Error fetching folder list: " . $e->getMessage());
@@ -81,28 +83,13 @@ class ImapSynchronizer
                 $client = $this->createClient($account);
                 $client->connect();
 
-                // Find folder object safely (iterate flat list if needed, or use getFolder)
-                // Since we have the path, we can try getFolder directly, but iteration is safer for encoding issues
+                // Find folder object safely
                 $activeFolder = null;
-
-                // We need to fetch all folders again to find the object
-                // This is inefficient but safe. Optimization: fetch flat list once if possible.
-                // Webklex doesn't have getFolderByPath easily without fetching.
-
-                // Try direct fetch first
-                try {
-                    $activeFolder = $client->getFolder($folderPath);
-                } catch (\Exception $e) {
-                    // Fallback: iterate
-                    $allFolders = $this->flattenFolders($client->getFolders(true));
-                    foreach ($allFolders as $fData) {
-                        // We need the OBJECT, but flattenFolders returns array.
-                        // We need a way to get the object.
-                        // Let's change flattenFolders to return objects or iterate recursively here.
+                foreach ($client->getFolders() as $f) {
+                    if ($f->path === $folderPath) {
+                        $activeFolder = $f;
+                        break;
                     }
-
-                    // Actually, let's just iterate recursively on the client folders to find the match
-                    $activeFolder = $this->findFolderByPath($client->getFolders(true), $folderPath);
                 }
 
                 if (!$activeFolder) {
@@ -116,8 +103,10 @@ class ImapSynchronizer
 
                 if ($output) $output->writeln("  Fetching UIDs...");
 
+                // Get all UIDs from server
                 $serverUids = $client->getConnection()->search(['ALL'])->validatedData();
 
+                // Prune deleted messages
                 $this->pruneDeletedMessages((int)$dbFolder->getId(), $serverUids, $output);
 
                 if (empty($serverUids)) {
@@ -126,6 +115,7 @@ class ImapSynchronizer
                     continue;
                 }
 
+                // Find missing UIDs (Server - DB)
                 $dbUids = $this->messageRepository->getUidsByFolderId((int)$dbFolder->getId());
                 $missingUids = array_diff($serverUids, $dbUids);
 
@@ -153,7 +143,12 @@ class ImapSynchronizer
                             try {
                                 $client->connect();
                                 $client->openFolder($folderPath);
-                                $activeFolder = $this->findFolderByPath($client->getFolders(true), $folderPath);
+                                foreach ($client->getFolders() as $f) {
+                                    if ($f->path === $folderPath) {
+                                        $activeFolder = $f;
+                                        break;
+                                    }
+                                }
                             } catch (\Exception $reconnectEx) {
                                 if ($output) $output->writeln("    Reconnect failed: " . $reconnectEx->getMessage());
                                 break;
@@ -171,44 +166,6 @@ class ImapSynchronizer
 
             sleep(1);
         }
-    }
-
-    /**
-     * Recursively flatten folder collection to array of data
-     */
-    private function flattenFolders($folders): array
-    {
-        $result = [];
-        foreach ($folders as $folder) {
-            $result[] = [
-                'name' => $folder->name,
-                'path' => $folder->path,
-                'delimiter' => $folder->delimiter
-            ];
-
-            if ($folder->hasChildren()) {
-                $result = array_merge($result, $this->flattenFolders($folder->children));
-            }
-        }
-        return $result;
-    }
-
-    /**
-     * Recursively find folder object by path
-     */
-    private function findFolderByPath($folders, string $path)
-    {
-        foreach ($folders as $folder) {
-            if ($folder->path === $path) {
-                return $folder;
-            }
-
-            if ($folder->hasChildren()) {
-                $found = $this->findFolderByPath($folder->children, $path);
-                if ($found) return $found;
-            }
-        }
-        return null;
     }
 
     private function pruneDeletedMessages(int $folderId, array $serverUids, ?OutputInterface $output): void
@@ -252,11 +209,12 @@ class ImapSynchronizer
 
         $date = $imapMessage->getDate();
 
+        // Prefer HTML, fallback to Text
         $content = '';
-        if ($imapMessage->hasTextBody()) {
-            $content = $imapMessage->getTextBody();
-        } elseif ($imapMessage->hasHTMLBody()) {
-            $content = strip_tags($imapMessage->getHTMLBody());
+        if ($imapMessage->hasHTMLBody()) {
+            $content = $imapMessage->getHTMLBody();
+        } elseif ($imapMessage->hasTextBody()) {
+            $content = nl2br($imapMessage->getTextBody()); // Convert newlines to BR for text emails
         }
 
         $flags = $imapMessage->getFlags();
@@ -300,7 +258,7 @@ class ImapSynchronizer
             subject: $subject,
             sender: $from,
             date: $dateImmutable,
-            content: substr($content, 0, 5000),
+            content: substr($content, 0, 100000), // Increase limit for HTML content
             status: $status,
             folderId: (int)$dbFolder->getId(),
             type: $type,

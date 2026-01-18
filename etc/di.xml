@@ -11,6 +11,7 @@
         <arguments>
             <argument name="commands" xsi:type="array">
                 <item name="gardenlawn_mailsync_sync" xsi:type="object">GardenLawn\MailSync\Console\Command\SyncCommand</item>
+                <item name="gardenlawn_mailsync_reset" xsi:type="object">GardenLawn\MailSync\Console\Command\ResetCommand</item>
             </argument>
         </arguments>
     </type>
