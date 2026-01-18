@@ -2,10 +2,15 @@
     "name": "gardenlawn/module-mailsync",
     "description": "GardenLawn MailSync Module",
     "type": "magento2-module",
+    "config": {
+        "sort-packages": true
+    },
     "version": "1.0.0",
     "require": {
         "php": "^8.5",
-        "webklex/php-imap": "^5.0"
+        "webklex/php-imap": "^5.0",
+        "magento/product-community-edition": "^2.4.8",
+        "hyva-themes/magento2-theme-module": "*"
     },
     "autoload": {
         "files": [
@@ -14,5 +19,11 @@
         "psr-4": {
             "GardenLawn\\MailSync\\": ""
         }
-    }
+    },
+    "authors": [
+        {
+            "name": "Rafał Piechota",
+            "email": "marcin.piechota@gardenlawn.pl"
+        }
+    ]
 }

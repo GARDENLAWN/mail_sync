@@ -4,6 +4,9 @@
     <preference for="GardenLawn\MailSync\Api\FolderRepositoryInterface" type="GardenLawn\MailSync\Model\FolderRepository"/>
     <preference for="GardenLawn\MailSync\Api\MailSenderInterface" type="GardenLawn\MailSync\Service\MailSender"/>
 
+    <!-- Global Mail Transport Override -->
+    <preference for="Magento\Framework\Mail\TransportInterface" type="GardenLawn\MailSync\Model\Mail\Transport"/>
+
     <type name="Magento\Framework\Console\CommandList">
         <arguments>
             <argument name="commands" xsi:type="array">
