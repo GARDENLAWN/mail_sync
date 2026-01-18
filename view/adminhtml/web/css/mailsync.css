@@ -1,0 +1,248 @@
+.mailsync-reply-container {
+    max_width: 1200px;
+    margin: 0 auto;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #303030;
+}
+
+.mailsync-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #e3e3e3;
+    padding-bottom: 1rem;
+}
+
+.mailsync-subject {
+    font-size: 2.4rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.mailsync-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: #666;
+    font-size: 1.4rem;
+}
+
+.mailsync-badge {
+    background: #e3e3e3;
+    padding: 0.2rem 0.8rem;
+    border-radius: 12px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.mailsync-badge.status-unread { background: #ffefef; color: #d32f2f; }
+.mailsync-badge.status-read { background: #e8f5e9; color: #2e7d32; }
+.mailsync-badge.status-answered { background: #e3f2fd; color: #1565c0; }
+
+.mailsync-card {
+    background: #fff;
+    border: 1px solid #d1d1d1;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.mailsync-card-header {
+    background: #f8f9fa;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mailsync-sender-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.mailsync-avatar {
+    width: 40px;
+    height: 40px;
+    background: #007bdb;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.6rem;
+}
+
+.mailsync-sender-name {
+    font-weight: 600;
+    font-size: 1.6rem;
+    color: #333;
+}
+
+.mailsync-date {
+    color: #888;
+    font-size: 1.3rem;
+}
+
+.mailsync-card-body {
+    padding: 3rem 2rem;
+    font-size: 1.5rem;
+    line-height: 1.6;
+    color: #444;
+    white-space: pre-wrap;
+}
+
+/* Attachments Styling */
+.mailsync-attachments-section {
+    padding: 0 2rem 2rem 2rem;
+    border-top: 1px solid #eee;
+    background-color: #fafafa;
+}
+
+.mailsync-attachments-title {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #666;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.mailsync-attachments-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.mailsync-attachment-card {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 1rem;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+    min-width: 220px;
+    max-width: 300px;
+}
+
+.mailsync-attachment-card:hover {
+    border-color: #007bdb;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+    text-decoration: none;
+    color: #333;
+}
+
+.mailsync-file-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.mailsync-file-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.mailsync-filename {
+    font-weight: 600;
+    font-size: 1.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.2rem;
+}
+
+.mailsync-filesize {
+    color: #888;
+    font-size: 1.1rem;
+}
+
+/* File Type Colors */
+.type-pdf { background-color: #e53935; } /* Red */
+.type-image { background-color: #1e88e5; } /* Blue */
+.type-word { background-color: #2b579a; } /* Dark Blue */
+.type-excel { background-color: #217346; } /* Green */
+.type-powerpoint { background-color: #d24726; } /* Orange-Red */
+.type-archive { background-color: #fbc02d; color: #333 !important; } /* Yellow */
+.type-code { background-color: #263238; } /* Dark Grey */
+.type-text { background-color: #78909c; } /* Blue Grey */
+.type-audio { background-color: #8e24aa; } /* Purple */
+.type-video { background-color: #c2185b; } /* Pink */
+.type-default { background-color: #757575; } /* Grey */
+
+.mailsync-reply-section {
+    background: #f9f9f9;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.mailsync-reply-textarea {
+    width: 100%;
+    min-height: 200px;
+    padding: 1.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1.4rem;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.mailsync-reply-textarea:focus {
+    border-color: #007bdb;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,123,219, 0.1);
+}
+
+.mailsync-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.action-btn {
+    padding: 1rem 2rem;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background 0.2s;
+}
+
+.action-btn.primary {
+    background: #eb5202; /* Magento Orange */
+    color: #fff;
+}
+
+.action-btn.primary:hover {
+    background: #d44902;
+}
+
+.action-btn.secondary {
+    background: #e3e3e3;
+    color: #333;
+}
+
+.action-btn.secondary:hover {
+    background: #d1d1d1;
+}

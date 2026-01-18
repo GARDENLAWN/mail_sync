@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="GardenLawn_MailSync::root" title="Mail Sync" module="GardenLawn_MailSync" sortOrder="50" resource="GardenLawn_MailSync::root"/>
+        <add id="GardenLawn_MailSync::messages" title="Messages" module="GardenLawn_MailSync" sortOrder="10" parent="GardenLawn_MailSync::root" action="gardenlawn_mailsync/message/index" resource="GardenLawn_MailSync::message"/>
+    </menu>
+</config>

@@ -1,0 +1,88 @@
+<?php
+/** @var \GardenLawn\MailSync\Block\Adminhtml\Message\Reply $block */
+$message = $block->getMessage();
+$senderName = $block->escapeHtml($message->getSender());
+$senderInitial = strtoupper(substr($senderName, 0, 1));
+$status = strtolower($message->getStatus());
+$attachments = $block->getAttachments();
+?>
+<?php if ($message): ?>
+    <div class="mailsync-reply-container">
+
+        <div class="mailsync-header">
+            <h1 class="mailsync-subject"><?= $block->escapeHtml($message->getSubject()) ?></h1>
+            <div class="mailsync-meta">
+                <span class="mailsync-badge status-<?= $status ?>"><?= $status ?></span>
+                <span>Folder ID: <?= $block->escapeHtml($message->getFolderId()) ?></span>
+            </div>
+        </div>
+
+        <div class="mailsync-card">
+            <div class="mailsync-card-header">
+                <div class="mailsync-sender-info">
+                    <div class="mailsync-avatar"><?= $senderInitial ?></div>
+                    <div>
+                        <div class="mailsync-sender-name"><?= $senderName ?></div>
+                        <div class="mailsync-date"><?= $block->escapeHtml($message->getDate()) ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mailsync-card-body">
+                <?= nl2br($block->escapeHtml($message->getContent())) ?>
+            </div>
+
+            <?php if (!empty($attachments)): ?>
+            <div class="mailsync-attachments-section">
+                <div class="mailsync-attachments-title">Attachments (<?= count($attachments) ?>)</div>
+                <div class="mailsync-attachments-grid">
+                    <?php foreach ($attachments as $attachment): ?>
+                        <?php
+                            $fileInfo = $block->getFileTypeInfo($attachment->getFilename(), $attachment->getMimeType() ?? '');
+                            $sizeKb = round($attachment->getSize() / 1024, 1);
+                        ?>
+                        <a href="<?= $block->escapeUrl($block->getDownloadUrl((int)$attachment->getId())) ?>" target="_blank" class="mailsync-attachment-card">
+                            <div class="mailsync-file-icon <?= $fileInfo['class'] ?>">
+                                <?= $fileInfo['label'] ?>
+                            </div>
+                            <div class="mailsync-file-info">
+                                <span class="mailsync-filename" title="<?= $block->escapeHtml($attachment->getFilename()) ?>">
+                                    <?= $block->escapeHtml($attachment->getFilename()) ?>
+                                </span>
+                                <span class="mailsync-filesize"><?= $sizeKb ?> KB</span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="mailsync-reply-section">
+            <form id="reply-form" action="<?= $block->escapeUrl($block->getSendUrl()) ?>" method="post" enctype="multipart/form-data">
+                <input name="form_key" type="hidden" value="<?= $block->getFormKey() ?>" />
+                <input name="id" type="hidden" value="<?= $message->getId() ?>" />
+
+                <h3 style="margin-bottom: 1rem; color: #333;">Reply to this message</h3>
+
+                <textarea id="reply_body" name="reply_body" class="mailsync-reply-textarea" placeholder="Type your reply here..."></textarea>
+
+                <div style="margin-top: 1.5rem;">
+                    <label for="reply_attachment" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Attach Files:</label>
+                    <input type="file" id="reply_attachment" name="reply_attachment[]" multiple />
+                </div>
+
+                <div class="mailsync-actions">
+                    <button type="button" class="action-btn secondary" onclick="location.href = '<?= $block->escapeUrl($block->getBackUrl()) ?>';">
+                        Cancel
+                    </button>
+                    <button type="submit" class="action-btn primary">
+                        Send Reply
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+<?php else: ?>
+    <div class="message error">Message not found.</div>
+<?php endif; ?>

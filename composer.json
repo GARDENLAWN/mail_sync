@@ -1,0 +1,18 @@
+{
+    "name": "gardenlawn/module-mailsync",
+    "description": "GardenLawn MailSync Module",
+    "type": "magento2-module",
+    "version": "1.0.0",
+    "require": {
+        "php": "^8.5",
+        "webklex/php-imap": "^5.0"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "GardenLawn\\MailSync\\": ""
+        }
+    }
+}

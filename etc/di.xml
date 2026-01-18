@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="GardenLawn\MailSync\Api\MessageRepositoryInterface" type="GardenLawn\MailSync\Model\MessageRepository"/>
+    <preference for="GardenLawn\MailSync\Api\FolderRepositoryInterface" type="GardenLawn\MailSync\Model\FolderRepository"/>
+    <preference for="GardenLawn\MailSync\Api\MailSenderInterface" type="GardenLawn\MailSync\Service\MailSender"/>
+
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="gardenlawn_mailsync_sync" xsi:type="object">GardenLawn\MailSync\Console\Command\SyncCommand</item>
+            </argument>
+        </arguments>
+    </type>
+</config>

@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/db_schema.xsd">
+
+    <table name="gardenlawn_mailsync_folder" resource="default" engine="innodb" comment="MailSync Folders">
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="name" length="255" nullable="false" comment="Folder Name"/>
+        <column xsi:type="varchar" name="path" length="255" nullable="false" comment="Full Folder Path"/>
+        <column xsi:type="varchar" name="delimiter" length="10" nullable="true" comment="Path Delimiter"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="GARDENLAWN_MAILSYNC_FOLDER_PATH">
+            <column name="path"/>
+        </constraint>
+    </table>
+
+    <table name="gardenlawn_mailsync_message" resource="default" engine="innodb" comment="MailSync Messages">
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="int" name="uid" padding="10" unsigned="true" nullable="false" comment="IMAP UID"/>
+        <column xsi:type="varchar" name="message_id" length="255" nullable="true" comment="Message-ID Header"/>
+        <column xsi:type="int" name="folder_id" padding="10" unsigned="true" nullable="false" comment="Folder ID"/>
+        <column xsi:type="varchar" name="subject" length="255" nullable="true" comment="Subject"/>
+        <column xsi:type="varchar" name="sender" length="255" nullable="true" comment="Sender"/>
+        <column xsi:type="datetime" name="date" nullable="false" comment="Date"/>
+        <column xsi:type="mediumtext" name="content" nullable="true" comment="Content"/>
+        <column xsi:type="varchar" name="status" length="32" nullable="false" default="unread" comment="Status"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+
+        <constraint xsi:type="unique" referenceId="GARDENLAWN_MAILSYNC_MESSAGE_UID_FOLDER_ID">
+            <column name="uid"/>
+            <column name="folder_id"/>
+        </constraint>
+
+        <constraint xsi:type="foreign" referenceId="GARDENLAWN_MAILSYNC_MESSAGE_FOLDER_ID_FK" table="gardenlawn_mailsync_message" column="folder_id" referenceTable="gardenlawn_mailsync_folder" referenceColumn="entity_id" onDelete="CASCADE"/>
+
+        <index referenceId="GARDENLAWN_MAILSYNC_MESSAGE_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+    </table>
+
+    <table name="gardenlawn_mailsync_attachment" resource="default" engine="innodb" comment="MailSync Attachments Metadata">
+        <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="int" name="message_entity_id" padding="10" unsigned="true" nullable="false" comment="Message Entity ID"/>
+        <column xsi:type="varchar" name="filename" length="255" nullable="true" comment="Filename"/>
+        <column xsi:type="varchar" name="mime_type" length="100" nullable="true" comment="Mime Type"/>
+        <column xsi:type="int" name="size" padding="10" unsigned="true" nullable="true" comment="Size in bytes"/>
+        <column xsi:type="varchar" name="part_number" length="50" nullable="false" comment="IMAP Part Number"/>
+
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+
+        <constraint xsi:type="foreign" referenceId="GARDENLAWN_MAILSYNC_ATTACHMENT_MESSAGE_FK" table="gardenlawn_mailsync_attachment" column="message_entity_id" referenceTable="gardenlawn_mailsync_message" referenceColumn="entity_id" onDelete="CASCADE"/>
+    </table>
+</schema>

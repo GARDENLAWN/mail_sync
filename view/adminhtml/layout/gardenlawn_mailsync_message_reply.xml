@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="GardenLawn_MailSync::css/mailsync.css"/>
+    </head>
+    <body>
+        <referenceContainer name="content">
+            <block class="GardenLawn\MailSync\Block\Adminhtml\Message\Reply" name="gardenlawn_mailsync_message_reply" template="GardenLawn_MailSync::message/reply.phtml"/>
+        </referenceContainer>
+    </body>
+</page>

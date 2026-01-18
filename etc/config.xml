@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <gardenlawn_mailsync>
+            <general>
+                <imap_settings>
+                    <host>pro2.mail.ovh.net</host>
+                    <port>993</port>
+                    <encryption>ssl</encryption>
+                </imap_settings>
+                <smtp_settings>
+                    <host>pro2.mail.ovh.net</host>
+                    <port>587</port>
+                    <encryption>tls</encryption>
+                </smtp_settings>
+            </general>
+        </gardenlawn_mailsync>
+    </default>
+</config>
