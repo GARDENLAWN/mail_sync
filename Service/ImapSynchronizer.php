@@ -17,7 +17,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class ImapSynchronizer
 {
-    // Folders to skip (system folders that are not emails or cause issues)
     private const IGNORED_FOLDERS = [
         'Kalendarz', 'Calendar',
         'Kontakty', 'Contacts',
@@ -36,68 +35,144 @@ class ImapSynchronizer
 
     public function sync(Account $account, ?OutputInterface $output = null, bool $foldersOnly = false): void
     {
-        $cm = new ClientManager();
+        // Step 1: Fetch Folder List
+        $folderList = [];
+        try {
+            $client = $this->createClient($account);
+            $client->connect();
+            if ($output) $output->writeln("Connected. Fetching folder list...");
 
-        $client = $cm->make([
-            'host'          => $account->imapHost,
-            'port'          => $account->imapPort,
-            'encryption'    => $account->imapEncryption,
-            'validate_cert' => false,
-            'username'      => $account->username,
-            'password'      => $account->password,
-            'protocol'      => 'imap'
-        ]);
+            $folders = $client->getFolders();
+            foreach ($folders as $f) {
+                $folderList[] = [
+                    'name' => $f->name,
+                    'path' => $f->path,
+                    'delimiter' => $f->delimiter
+                ];
+            }
+            $client->disconnect();
+        } catch (\Exception $e) {
+            if ($output) $output->writeln("Error fetching folder list: " . $e->getMessage());
+            return;
+        }
 
-        $client->connect();
+        // Step 2: Process each folder individually
+        foreach ($folderList as $folderData) {
+            $folderName = $folderData['name'];
+            $folderPath = $folderData['path'];
 
-        if ($output) $output->writeln("Connected. Fetching folders...");
-
-        $folders = $client->getFolders();
-
-        foreach ($folders as $imapFolder) {
-            $folderName = $this->decodeImapUtf7($imapFolder->name);
-
-            if ($output) $output->writeln("Processing folder: " . $folderName . " (" . $imapFolder->path . ")");
+            if ($output) $output->writeln("Processing folder: " . $folderName . " (" . $folderPath . ")");
 
             $dbFolder = $this->folderRepository->getOrCreate(
-                $imapFolder->path,
+                $folderPath,
                 $folderName,
-                $imapFolder->delimiter
+                $folderData['delimiter']
             );
 
             if ($foldersOnly) {
                 continue;
             }
 
-            // Skip ignored folders
             if (in_array($folderName, self::IGNORED_FOLDERS)) {
                 if ($output) $output->writeln("  Skipping ignored folder: $folderName");
                 continue;
             }
 
+            // Reconnect for this folder
             try {
-                if ($output) $output->writeln("  Fetching messages...");
+                $client = $this->createClient($account);
+                $client->connect();
 
-                // Try to select folder first to ensure it exists and is accessible
-                // $imapFolder->examine(); // Optional, might throw error too
-
-                $messages = $imapFolder->query()->limit(50)->get();
-
-                if ($output) $output->writeln("  Found " . count($messages) . " messages.");
-
-                foreach ($messages as $imapMessage) {
-                    try {
-                        $this->processMessage($imapMessage, $dbFolder, $output);
-                    } catch (\Exception $e) {
-                        if ($output) $output->writeln("    Error processing message: " . $e->getMessage());
+                // Find folder object safely
+                $activeFolder = null;
+                foreach ($client->getFolders() as $f) {
+                    if ($f->path === $folderPath) {
+                        $activeFolder = $f;
+                        break;
                     }
                 }
-            } catch (\Exception $e) {
-                if ($output) $output->writeln("  Error fetching messages from folder '$folderName': " . $e->getMessage());
-            }
-        }
 
-        $client->disconnect();
+                if (!$activeFolder) {
+                    if ($output) $output->writeln("  Could not find folder object for '$folderName'. Skipping.");
+                    $client->disconnect();
+                    continue;
+                }
+
+                // Select folder
+                $client->openFolder($folderPath);
+
+                if ($output) $output->writeln("  Fetching UIDs...");
+
+                $uids = $client->getConnection()->search(['ALL'])->validatedData();
+
+                if (empty($uids)) {
+                    if ($output) $output->writeln("  Folder is empty.");
+                    $client->disconnect();
+                    continue;
+                }
+
+                rsort($uids);
+                $uidsToSync = array_slice($uids, 0, 20);
+
+                if ($output) $output->writeln("  Found " . count($uids) . " messages. Syncing " . count($uidsToSync) . " newest.");
+
+                foreach ($uidsToSync as $uid) {
+                    try {
+                        // Use the active folder object we found earlier
+                        $message = $activeFolder->query()->getMessageByUid($uid);
+
+                        $this->processMessage($message, $dbFolder, $output);
+
+                        usleep(50000);
+                    } catch (\Exception $e) {
+                        if ($output) $output->writeln("    Error processing message UID $uid: " . $e->getMessage());
+
+                        if (!$client->isConnected()) {
+                            if ($output) $output->writeln("    Reconnecting...");
+                            try {
+                                $client->connect();
+                                $client->openFolder($folderPath);
+                                // Re-fetch active folder object after reconnect
+                                foreach ($client->getFolders() as $f) {
+                                    if ($f->path === $folderPath) {
+                                        $activeFolder = $f;
+                                        break;
+                                    }
+                                }
+                            } catch (\Exception $reconnectEx) {
+                                if ($output) $output->writeln("    Reconnect failed: " . $reconnectEx->getMessage());
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                $client->disconnect();
+
+            } catch (\Exception $e) {
+                if ($output) $output->writeln("  Error processing folder '$folderName': " . $e->getMessage());
+                try { $client->disconnect(); } catch (\Exception $ex) {}
+            }
+
+            sleep(1);
+        }
+    }
+
+    private function createClient(Account $account)
+    {
+        $cm = new ClientManager();
+        return $cm->make([
+            'host'          => $account->imapHost,
+            'port'          => $account->imapPort,
+            'encryption'    => $account->imapEncryption,
+            'validate_cert' => false,
+            'username'      => $account->username,
+            'password'      => $account->password,
+            'protocol'      => 'imap',
+            'options' => [
+                'debug' => false,
+            ]
+        ]);
     }
 
     private function processMessage($imapMessage, $dbFolder, $output): void
@@ -196,13 +271,5 @@ class ImapSynchronizer
         }
 
         if ($output) $output->writeln("    Processed UID: $uid");
-    }
-
-    private function decodeImapUtf7(string $str): string
-    {
-        if (function_exists('mb_convert_encoding')) {
-             return mb_convert_encoding($str, 'UTF-8', 'UTF7-IMAP');
-        }
-        return $str;
     }
 }
