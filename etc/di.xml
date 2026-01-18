@@ -14,4 +14,13 @@
             </argument>
         </arguments>
     </type>
+
+    <!-- UI Component Data Source Configuration -->
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="gardenlawn_mailsync_message_listing_data_source" xsi:type="string">GardenLawn\MailSync\Model\ResourceModel\Message\Collection</item>
+            </argument>
+        </arguments>
+    </type>
 </config>
