@@ -1,248 +1,250 @@
-.mailsync-reply-container {
-    max_width: 1200px;
-    margin: 0 auto;
-    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #303030;
-}
-
-.mailsync-header {
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #e3e3e3;
-    padding-bottom: 1rem;
-}
-
-.mailsync-subject {
-    font-size: 2.4rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-
-.mailsync-meta {
+.mailsync-outlook {
     display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: #666;
-    font-size: 1.4rem;
-}
-
-.mailsync-badge {
-    background: #e3e3e3;
-    padding: 0.2rem 0.8rem;
-    border-radius: 12px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-.mailsync-badge.status-unread { background: #ffefef; color: #d32f2f; }
-.mailsync-badge.status-read { background: #e8f5e9; color: #2e7d32; }
-.mailsync-badge.status-answered { background: #e3f2fd; color: #1565c0; }
-
-.mailsync-card {
+    height: calc(100vh - 100px); /* Adjust based on Magento header */
     background: #fff;
     border: 1px solid #d1d1d1;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    margin-bottom: 2rem;
     overflow: hidden;
 }
 
-.mailsync-card-header {
-    background: #f8f9fa;
-    padding: 1.5rem 2rem;
+/* Sidebar (Folders) */
+.mailsync-sidebar {
+    width: 250px;
+    background: #f5f5f5;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mailsync-sidebar-header {
+    padding: 1rem;
+}
+
+.mailsync-folders-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.mailsync-folder-item {
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    color: #444;
+    font-size: 1.4rem;
+}
+
+.mailsync-folder-item:hover {
+    background: #e9e9e9;
+}
+
+.mailsync-folder-item.active {
+    background: #e0e0e0;
+    font-weight: 600;
+    color: #000;
+}
+
+/* Message List (Middle) */
+.mailsync-message-list {
+    width: 350px;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.mailsync-list-header {
+    padding: 1rem;
     border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
-.mailsync-sender-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+.mailsync-list-content {
+    flex: 1;
+    overflow-y: auto;
 }
 
-.mailsync-avatar {
-    width: 40px;
-    height: 40px;
+.mailsync-message-item {
+    padding: 1.2rem;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.mailsync-message-item:hover {
+    background: #f9f9f9;
+}
+
+.mailsync-message-item.active {
+    background: #e6f7ff;
+    border-left: 4px solid #007bdb;
+}
+
+.mailsync-message-item.unread .msg-subject {
+    font-weight: 700;
+    color: #000;
+}
+
+.msg-sender {
+    font-size: 1.4rem;
+    color: #333;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.msg-subject {
+    font-size: 1.3rem;
+    color: #555;
+    margin-bottom: 0.4rem;
+}
+
+.msg-preview {
+    font-size: 1.2rem;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.msg-date {
+    font-size: 1.1rem;
+    color: #999;
+    text-align: right;
+    margin-top: 0.5rem;
+}
+
+/* Message View (Right) */
+.mailsync-message-view {
+    flex: 1;
+    overflow-y: auto;
+    background: #fff;
+    padding: 2rem;
+    position: relative;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #ccc;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.message-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1.5rem;
+}
+
+.message-header h2 {
+    font-size: 2.2rem;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.message-meta {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.sender-avatar {
+    width: 48px;
+    height: 48px;
     background: #007bdb;
     color: #fff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.8rem;
     font-weight: bold;
-    font-size: 1.6rem;
 }
 
-.mailsync-sender-name {
+.meta-info {
+    flex: 1;
+}
+
+.sender-name {
     font-weight: 600;
     font-size: 1.6rem;
     color: #333;
 }
 
-.mailsync-date {
+.message-date {
     color: #888;
     font-size: 1.3rem;
 }
 
-.mailsync-card-body {
-    padding: 3rem 2rem;
+.message-body {
     font-size: 1.5rem;
     line-height: 1.6;
     color: #444;
-    white-space: pre-wrap;
+    margin-bottom: 3rem;
 }
 
-/* Attachments Styling */
-.mailsync-attachments-section {
-    padding: 0 2rem 2rem 2rem;
+/* Attachments */
+.message-attachments {
     border-top: 1px solid #eee;
-    background-color: #fafafa;
+    padding-top: 1.5rem;
 }
 
-.mailsync-attachments-title {
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
-    color: #666;
-    font-size: 1.2rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-}
-
-.mailsync-attachments-grid {
+.attachments-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem;
-}
-
-.mailsync-attachment-card {
-    display: flex;
-    align-items: center;
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    padding: 1rem;
-    text-decoration: none;
-    color: #333;
-    transition: all 0.2s ease;
-    min-width: 220px;
-    max-width: 300px;
-}
-
-.mailsync-attachment-card:hover {
-    border-color: #007bdb;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-    transform: translateY(-1px);
-    text-decoration: none;
-    color: #333;
-}
-
-.mailsync-file-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 1.2rem;
-    font-weight: 700;
-    color: #fff;
-    font-size: 1.1rem;
-    text-transform: uppercase;
-    flex-shrink: 0;
-}
-
-.mailsync-file-info {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.mailsync-filename {
-    font-weight: 600;
-    font-size: 1.3rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 0.2rem;
-}
-
-.mailsync-filesize {
-    color: #888;
-    font-size: 1.1rem;
-}
-
-/* File Type Colors */
-.type-pdf { background-color: #e53935; } /* Red */
-.type-image { background-color: #1e88e5; } /* Blue */
-.type-word { background-color: #2b579a; } /* Dark Blue */
-.type-excel { background-color: #217346; } /* Green */
-.type-powerpoint { background-color: #d24726; } /* Orange-Red */
-.type-archive { background-color: #fbc02d; color: #333 !important; } /* Yellow */
-.type-code { background-color: #263238; } /* Dark Grey */
-.type-text { background-color: #78909c; } /* Blue Grey */
-.type-audio { background-color: #8e24aa; } /* Purple */
-.type-video { background-color: #c2185b; } /* Pink */
-.type-default { background-color: #757575; } /* Grey */
-
-.mailsync-reply-section {
-    background: #f9f9f9;
-    padding: 2rem;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-}
-
-.mailsync-reply-textarea {
-    width: 100%;
-    min-height: 200px;
-    padding: 1.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1.4rem;
-    line-height: 1.5;
-    resize: vertical;
-    transition: border-color 0.2s;
-}
-
-.mailsync-reply-textarea:focus {
-    border-color: #007bdb;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0,123,219, 0.1);
-}
-
-.mailsync-actions {
-    margin-top: 1.5rem;
-    display: flex;
-    justify-content: flex-end;
     gap: 1rem;
+    margin-top: 1rem;
+}
+
+.attachment-card {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.2rem;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.attachment-card:hover {
+    background: #e9e9e9;
+    text-decoration: none;
+    color: #333;
+}
+
+.att-icon { margin-right: 0.8rem; }
+.att-size { color: #888; margin-left: 0.5rem; font-size: 1.1rem; }
+
+/* Compose View */
+.compose-view {
+    background: #fff;
+    height: 100%;
 }
 
 .action-btn {
-    padding: 1rem 2rem;
+    padding: 0.8rem 1.5rem;
     border-radius: 4px;
     font-weight: 600;
     cursor: pointer;
-    border: none;
-    transition: background 0.2s;
+    border: 1px solid transparent;
 }
 
 .action-btn.primary {
-    background: #eb5202; /* Magento Orange */
+    background: #eb5202;
     color: #fff;
 }
 
-.action-btn.primary:hover {
-    background: #d44902;
-}
-
 .action-btn.secondary {
-    background: #e3e3e3;
+    background: #fff;
+    border-color: #d1d1d1;
     color: #333;
-}
-
-.action-btn.secondary:hover {
-    background: #d1d1d1;
 }

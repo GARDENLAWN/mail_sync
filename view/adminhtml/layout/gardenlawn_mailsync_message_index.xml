@@ -1,8 +1,16 @@
 <?xml version="1.0"?>
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <css src="GardenLawn_MailSync::css/mailsync.css"/>
+        <script src="GardenLawn_MailSync::js/alpine.js"/> <!-- Assuming Alpine is available or we use Hyva's -->
+    </head>
     <body>
         <referenceContainer name="content">
-            <uiComponent name="gardenlawn_mailsync_message_listing"/>
+            <!-- Remove standard UI Component -->
+            <!-- <uiComponent name="gardenlawn_mailsync_message_listing"/> -->
+
+            <!-- Add Custom Outlook Block -->
+            <block class="Magento\Backend\Block\Template" name="gardenlawn_mailsync_outlook" template="GardenLawn_MailSync::message/outlook.phtml"/>
         </referenceContainer>
     </body>
 </page>

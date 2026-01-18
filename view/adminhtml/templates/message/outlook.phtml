@@ -1,0 +1,218 @@
+<?php
+/** @var \Magento\Backend\Block\Template $block */
+?>
+<div class="mailsync-outlook" x-data="mailSyncApp()" x-init="init()">
+
+    <!-- Left Sidebar: Folders -->
+    <div class="mailsync-sidebar">
+        <div class="mailsync-sidebar-header">
+            <button class="action-btn primary w-full" @click="composeEmail()">
+                <span>New Message</span>
+            </button>
+        </div>
+        <div class="mailsync-folders-list">
+            <template x-for="folder in folders" :key="folder.id">
+                <div class="mailsync-folder-item"
+                     :class="{ 'active': activeFolderId === folder.id }"
+                     @click="selectFolder(folder.id)">
+                    <span class="folder-icon">📁</span>
+                    <span x-text="folder.name"></span>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Middle Column: Message List -->
+    <div class="mailsync-message-list">
+        <div class="mailsync-list-header">
+            <input type="text" placeholder="Search..." class="admin__control-text w-full" x-model="searchQuery">
+        </div>
+        <div class="mailsync-list-content">
+            <template x-if="loadingMessages">
+                <div class="p-4 text-center">Loading...</div>
+            </template>
+            <template x-for="msg in filteredMessages" :key="msg.id">
+                <div class="mailsync-message-item"
+                     :class="{ 'active': activeMessageId === msg.id, 'unread': msg.status === 'unread' }"
+                     @click="selectMessage(msg.id)">
+                    <div class="msg-sender" x-text="msg.sender"></div>
+                    <div class="msg-subject" x-text="msg.subject"></div>
+                    <div class="msg-preview" x-text="msg.preview"></div>
+                    <div class="msg-date" x-text="formatDate(msg.date)"></div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Right Column: Message View -->
+    <div class="mailsync-message-view">
+        <template x-if="!activeMessage && !isComposing">
+            <div class="empty-state">
+                <div class="empty-icon">✉️</div>
+                <p>Select an item to read</p>
+            </div>
+        </template>
+
+        <template x-if="loadingContent">
+            <div class="p-8 text-center">Loading content...</div>
+        </template>
+
+        <template x-if="activeMessage && !loadingContent && !isComposing">
+            <div class="message-detail">
+                <div class="message-header">
+                    <h2 x-text="activeMessage.subject"></h2>
+                    <div class="message-meta">
+                        <div class="sender-avatar" x-text="getInitials(activeMessage.sender)"></div>
+                        <div class="meta-info">
+                            <div class="sender-name" x-text="activeMessage.sender"></div>
+                            <div class="message-date" x-text="activeMessage.date"></div>
+                        </div>
+                        <div class="message-actions">
+                            <button class="action-btn secondary" @click="replyToMessage()">Reply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="message-body" x-html="activeMessage.content"></div>
+
+                <template x-if="activeMessage.attachments && activeMessage.attachments.length > 0">
+                    <div class="message-attachments">
+                        <h4>Attachments</h4>
+                        <div class="attachments-grid">
+                            <template x-for="att in activeMessage.attachments" :key="att.id">
+                                <a :href="att.download_url" target="_blank" class="attachment-card">
+                                    <span class="att-icon">📎</span>
+                                    <span class="att-name" x-text="att.filename"></span>
+                                    <span class="att-size" x-text="formatSize(att.size)"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
+
+        <!-- Compose / Reply Mode -->
+        <template x-if="isComposing">
+            <div class="compose-view">
+                <h3>Reply</h3>
+                <form id="reply-form" action="<?= $block->getUrl('gardenlawn_mailsync/message/send') ?>" method="post" enctype="multipart/form-data">
+                    <input name="form_key" type="hidden" value="<?= $block->getFormKey() ?>" />
+                    <input name="id" type="hidden" :value="activeMessageId" />
+
+                    <div class="field">
+                        <textarea name="reply_body" class="admin__control-textarea w-full h-64" placeholder="Type your reply..."></textarea>
+                    </div>
+
+                    <div class="field mt-4">
+                        <label>Attachments:</label>
+                        <input type="file" name="reply_attachment[]" multiple />
+                    </div>
+
+                    <div class="actions mt-4 flex justify-end gap-2">
+                        <button type="button" class="action-btn secondary" @click="isComposing = false">Cancel</button>
+                        <button type="submit" class="action-btn primary">Send</button>
+                    </div>
+                </form>
+            </div>
+        </template>
+    </div>
+</div>
+
+<script>
+    function mailSyncApp() {
+        return {
+            folders: [],
+            messages: [],
+            activeFolderId: null,
+            activeMessageId: null,
+            activeMessage: null,
+            searchQuery: '',
+            loadingMessages: false,
+            loadingContent: false,
+            isComposing: false,
+
+            init() {
+                this.fetchFolders();
+            },
+
+            fetchFolders() {
+                fetch('<?= $block->getUrl('gardenlawn_mailsync/api/folders') ?>')
+                    .then(r => r.json())
+                    .then(data => {
+                        this.folders = data;
+                        if (this.folders.length > 0) {
+                            // Try to find INBOX
+                            const inbox = this.folders.find(f => f.name.toUpperCase() === 'INBOX');
+                            this.selectFolder(inbox ? inbox.id : this.folders[0].id);
+                        }
+                    });
+            },
+
+            selectFolder(id) {
+                this.activeFolderId = id;
+                this.activeMessageId = null;
+                this.activeMessage = null;
+                this.isComposing = false;
+                this.loadingMessages = true;
+
+                fetch('<?= $block->getUrl('gardenlawn_mailsync/api/messages') ?>?folder_id=' + id)
+                    .then(r => r.json())
+                    .then(data => {
+                        this.messages = data;
+                        this.loadingMessages = false;
+                    });
+            },
+
+            selectMessage(id) {
+                this.activeMessageId = id;
+                this.isComposing = false;
+                this.loadingContent = true;
+
+                fetch('<?= $block->getUrl('gardenlawn_mailsync/api/message') ?>?id=' + id)
+                    .then(r => r.json())
+                    .then(data => {
+                        this.activeMessage = data;
+                        this.loadingContent = false;
+                    });
+            },
+
+            replyToMessage() {
+                this.isComposing = true;
+            },
+
+            composeEmail() {
+                // New email logic (not reply) - for now just reset
+                this.activeMessageId = null;
+                this.activeMessage = null;
+                this.isComposing = true;
+            },
+
+            get filteredMessages() {
+                if (!this.searchQuery) return this.messages;
+                const q = this.searchQuery.toLowerCase();
+                return this.messages.filter(m =>
+                    m.subject.toLowerCase().includes(q) ||
+                    m.sender.toLowerCase().includes(q)
+                );
+            },
+
+            formatDate(dateStr) {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            },
+
+            getInitials(name) {
+                return name ? name.charAt(0).toUpperCase() : '?';
+            },
+
+            formatSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+            }
+        }
+    }
+</script>
