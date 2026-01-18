@@ -25,7 +25,7 @@
     <!-- Middle Column: Message List -->
     <div class="mailsync-message-list w-[350px] border-r border-gray-200 flex flex-col bg-white">
         <div class="mailsync-list-header p-4 border-b border-gray-200">
-            <input type="text" placeholder="Search..." class="admin__control-text w-full" x-model="searchQuery">
+            <input type="text" placeholder="Search..." class="admin__control-text !w-full" x-model="searchQuery">
         </div>
         <div class="mailsync-list-content flex-1 overflow-y-auto">
             <template x-if="loadingMessages">
@@ -80,8 +80,10 @@
                         <h4 class="mb-4 text-gray-600 uppercase text-xs font-bold tracking-wide">Attachments</h4>
                         <div class="attachments-grid flex flex-wrap gap-4">
                             <template x-for="att in activeMessage.attachments" :key="att.id">
-                                <a :href="att.download_url" target="_blank" class="attachment-card flex items-center px-4 py-3 bg-gray-100 border border-gray-300 rounded no-underline text-gray-800 hover:bg-gray-200">
-                                    <span class="att-icon mr-3">📎</span>
+                                <a :href="att.download_url" target="_blank" class="attachment-card flex items-center px-4 py-3 bg-gray-100 border border-gray-300 rounded no-underline text-gray-800 hover:bg-gray-200 transition-colors">
+                                    <span class="att-icon mr-3 w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
+                                          :class="getFileTypeClass(att.filename, att.mime)"
+                                          x-text="getFileExtension(att.filename)"></span>
                                     <span class="att-name" x-text="att.filename"></span>
                                     <span class="att-size text-gray-500 ml-2 text-sm" x-text="formatSize(att.size)"></span>
                                 </a>
@@ -95,33 +97,48 @@
         <!-- Compose / Reply Mode -->
         <div class="compose-view bg-white h-full flex flex-col" x-show="isComposing" style="display: none;">
             <h3 class="text-xl mb-6" x-text="activeMessageId ? 'Reply' : 'New Message'"></h3>
-            <form id="reply-form" action="<?= $block->getUrl('gardenlawn_mailsync/message/send') ?>" method="post" enctype="multipart/form-data" class="flex-1 flex flex-col">
-                <input name="form_key" type="hidden" value="<?= $block->getFormKey() ?>" />
-                <input name="id" type="hidden" :value="activeMessageId" />
+            <form @submit.prevent="sendMessage" class="flex-1 flex flex-col">
 
                 <div class="field mb-4">
                     <label class="block mb-2 font-bold text-gray-700">To:</label>
-                    <input type="text" name="to" class="admin__control-text w-full p-2" x-model="composeTo" :readonly="!!activeMessageId">
+                    <input type="text" x-model="composeTo" class="admin__control-text !w-full p-2" :readonly="!!activeMessageId">
                 </div>
 
                 <div class="field mb-4">
                     <label class="block mb-2 font-bold text-gray-700">Subject:</label>
-                    <input type="text" name="subject" class="admin__control-text w-full p-2" x-model="composeSubject" :readonly="!!activeMessageId">
+                    <input type="text" x-model="composeSubject" class="admin__control-text !w-full p-2" :readonly="!!activeMessageId">
                 </div>
 
                 <div class="field flex-1 mb-4">
                     <label class="block mb-2 font-bold text-gray-700">Message:</label>
-                    <textarea name="reply_body" class="admin__control-textarea w-full h-full p-4 min-h-[400px]" placeholder="Type your message..."></textarea>
+                    <textarea x-model="composeBody" class="admin__control-textarea !w-full h-full p-4 min-h-[400px]" placeholder="Type your message..."></textarea>
                 </div>
 
                 <div class="field mb-6">
                     <label class="block mb-2 font-bold text-gray-700">Attachments:</label>
-                    <input type="file" name="reply_attachment[]" multiple class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                    <input type="file" multiple @change="handleFileUpload($event)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+
+                    <!-- New Attachments Preview -->
+                    <div class="mt-4 flex flex-wrap gap-4" x-show="filesToUpload.length > 0">
+                        <template x-for="(file, index) in filesToUpload" :key="index">
+                            <div class="attachment-card flex items-center px-4 py-3 bg-gray-100 border border-gray-300 rounded text-gray-800 relative group">
+                                <span class="att-icon mr-3 w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
+                                      :class="getFileTypeClass(file.name, file.type)"
+                                      x-text="getFileExtension(file.name)"></span>
+                                <span class="att-name" x-text="file.name"></span>
+                                <span class="att-size text-gray-500 ml-2 text-sm" x-text="formatSize(file.size)"></span>
+                                <button type="button" @click="removeFile(index)" class="ml-2 text-red-500 hover:text-red-700 font-bold">×</button>
+                            </div>
+                        </template>
+                    </div>
                 </div>
 
                 <div class="actions pt-4 border-t border-gray-200 flex justify-end gap-3">
                     <button type="button" class="action-btn secondary" @click="isComposing = false">Cancel</button>
-                    <button type="submit" class="action-btn primary">Send</button>
+                    <button type="submit" class="action-btn primary" :disabled="sending">
+                        <span x-show="!sending">Send</span>
+                        <span x-show="sending">Sending...</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -145,6 +162,9 @@
                 isComposing: false,
                 composeTo: '',
                 composeSubject: '',
+                composeBody: '',
+                filesToUpload: [],
+                sending: false,
 
                 init() {
                     this.fetchFolders();
@@ -194,6 +214,8 @@
                 replyToMessage() {
                     this.composeTo = this.activeMessage.sender;
                     this.composeSubject = 'Re: ' + this.activeMessage.subject;
+                    this.composeBody = '';
+                    this.filesToUpload = [];
                     this.isComposing = true;
                 },
 
@@ -202,7 +224,60 @@
                     this.activeMessage = null;
                     this.composeTo = '';
                     this.composeSubject = '';
+                    this.composeBody = '';
+                    this.filesToUpload = [];
                     this.isComposing = true;
+                },
+
+                handleFileUpload(event) {
+                    const files = event.target.files;
+                    for (let i = 0; i < files.length; i++) {
+                        this.filesToUpload.push(files[i]);
+                    }
+                    // Reset input so same file can be selected again if needed
+                    event.target.value = '';
+                },
+
+                removeFile(index) {
+                    this.filesToUpload.splice(index, 1);
+                },
+
+                sendMessage() {
+                    this.sending = true;
+                    const formData = new FormData();
+                    formData.append('form_key', '<?= $block->getFormKey() ?>');
+
+                    if (this.activeMessageId) {
+                        formData.append('id', this.activeMessageId);
+                    }
+
+                    formData.append('to', this.composeTo);
+                    formData.append('subject', this.composeSubject);
+                    formData.append('reply_body', this.composeBody);
+
+                    for (let i = 0; i < this.filesToUpload.length; i++) {
+                        formData.append('reply_attachment[]', this.filesToUpload[i]);
+                    }
+
+                    fetch('<?= $block->getUrl('gardenlawn_mailsync/message/send') ?>', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => {
+                        if (response.redirected) {
+                            // Magento controller redirects on success/error
+                            // We can reload the page or handle it better if controller returned JSON
+                            window.location.href = response.url;
+                        } else {
+                            // Fallback reload
+                            window.location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error sending message');
+                        this.sending = false;
+                    });
                 },
 
                 get filteredMessages() {
@@ -238,7 +313,7 @@
                 getFileTypeClass(filename, mime) {
                     const ext = filename.split('.').pop().toLowerCase();
                     if (['pdf'].includes(ext)) return 'type-pdf';
-                    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || mime.startsWith('image/')) return 'type-image';
+                    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(ext) || (mime && mime.startsWith('image/'))) return 'type-image';
                     if (['doc', 'docx', 'rtf'].includes(ext)) return 'type-word';
                     if (['xls', 'xlsx', 'csv'].includes(ext)) return 'type-excel';
                     if (['ppt', 'pptx'].includes(ext)) return 'type-powerpoint';
