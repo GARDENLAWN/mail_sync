@@ -26,7 +26,11 @@
     <!-- Middle Column: Message List -->
     <div class="mailsync-message-list w-[350px] border-r border-gray-200 flex flex-col bg-white">
         <div class="mailsync-list-header p-4 border-b border-gray-200">
-            <input type="text" placeholder="Search..." class="admin__control-text !w-full" x-model="searchQuery">
+            <input type="text"
+                   placeholder="Search sender, subject, content..."
+                   class="admin__control-text !w-full"
+                   x-model="searchQuery"
+                   @input.debounce.500ms="performSearch()">
         </div>
         <!-- Added @scroll handler for infinite scrolling -->
         <div class="mailsync-list-content flex-1 overflow-y-auto" @scroll="handleScroll($event)">
@@ -34,7 +38,7 @@
                 <div class="p-4 text-center">Loading...</div>
             </template>
 
-            <template x-for="msg in filteredMessages" :key="msg.id">
+            <template x-for="msg in messages" :key="msg.id">
                 <div class="mailsync-message-item p-5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50"
                      :class="{ 'active bg-blue-50 border-l-4 border-blue-500': activeMessageId === msg.id, 'unread': msg.status === 'unread' }"
                      @click="selectMessage(msg.id)">
@@ -50,8 +54,15 @@
                 <div class="p-4 text-center text-xs text-gray-500">Loading more messages...</div>
             </template>
 
-            <template x-if="!hasMoreMessages && messages.length > 0 && !searchQuery">
+            <template x-if="!hasMoreMessages && messages.length > 0">
                 <div class="p-4 text-center text-xs text-gray-400">No more messages</div>
+            </template>
+
+            <template x-if="!loadingMessages && messages.length === 0">
+                <div class="p-8 text-center text-gray-500">
+                    <div class="text-4xl mb-2">🔍</div>
+                    <p x-text="searchQuery ? 'No messages found matching your search.' : 'No messages in this folder.'"></p>
+                </div>
             </template>
         </div>
     </div>
@@ -233,14 +244,22 @@
                     this.activeMessageId = null;
                     this.activeMessage = null;
                     this.isComposing = false;
-                    this.loadingMessages = true;
+                    this.searchQuery = ''; // Clear search on folder change
+                    this.resetAndFetchMessages();
+                },
 
-                    // Reset pagination
+                performSearch() {
+                    // Triggered by @input.debounce
+                    this.resetAndFetchMessages();
+                },
+
+                resetAndFetchMessages() {
+                    this.loadingMessages = true;
                     this.messages = [];
                     this.page = 1;
                     this.hasMoreMessages = true;
 
-                    this.fetchMessages(id, this.page).then(data => {
+                    this.fetchMessages(this.activeFolderId, this.page, this.searchQuery).then(data => {
                         this.messages = data;
                         this.loadingMessages = false;
                         if (data.length < this.limit) {
@@ -249,15 +268,15 @@
                     });
                 },
 
-                fetchMessages(folderId, page) {
-                    return fetch('<?= $block->getUrl('gardenlawn_mailsync/api/messages') ?>?folder_id=' + folderId + '&page=' + page + '&limit=' + this.limit)
-                        .then(r => r.json());
+                fetchMessages(folderId, page, search = '') {
+                    let url = '<?= $block->getUrl('gardenlawn_mailsync/api/messages') ?>?folder_id=' + folderId + '&page=' + page + '&limit=' + this.limit;
+                    if (search) {
+                        url += '&search=' + encodeURIComponent(search);
+                    }
+                    return fetch(url).then(r => r.json());
                 },
 
                 handleScroll(event) {
-                    // If searching, disable infinite scroll (or implement search pagination)
-                    if (this.searchQuery) return;
-
                     const el = event.target;
                     // Check if scrolled near bottom (within 50px)
                     if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
@@ -271,7 +290,7 @@
                     this.loadingMore = true;
                     this.page++;
 
-                    this.fetchMessages(this.activeFolderId, this.page).then(data => {
+                    this.fetchMessages(this.activeFolderId, this.page, this.searchQuery).then(data => {
                         if (data.length > 0) {
                             // Append new messages
                             this.messages = [...this.messages, ...data];
@@ -395,15 +414,6 @@
                         alert('Error moving message');
                         this.loadingContent = false;
                     });
-                },
-
-                get filteredMessages() {
-                    if (!this.searchQuery) return this.messages;
-                    const q = this.searchQuery.toLowerCase();
-                    return this.messages.filter(m =>
-                        m.subject.toLowerCase().includes(q) ||
-                        m.sender.toLowerCase().includes(q)
-                    );
                 },
 
                 formatDate(dateStr) {
