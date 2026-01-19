@@ -21,6 +21,8 @@ class Messages extends Action
     public function execute()
     {
         $folderId = $this->getRequest()->getParam('folder_id');
+        $page = (int)$this->getRequest()->getParam('page', 1);
+        $limit = (int)$this->getRequest()->getParam('limit', 20); // Zmniejszam domyślny limit dla płynniejszego ładowania
 
         $collection = $this->collectionFactory->create();
         if ($folderId) {
@@ -28,7 +30,8 @@ class Messages extends Action
         }
 
         $collection->setOrder('date', 'DESC');
-        $collection->setPageSize(50);
+        $collection->setPageSize($limit);
+        $collection->setCurPage($page);
 
         $messages = [];
         foreach ($collection as $message) {
