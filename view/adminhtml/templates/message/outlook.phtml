@@ -12,12 +12,30 @@
         </div>
         <div class="mailsync-folders-list flex-1 overflow-y-auto">
             <template x-for="folder in folders" :key="folder.id">
-                <div class="mailsync-folder-item"
-                     :class="{ 'active': activeFolderId === folder.id }"
+                <div class="mailsync-folder-item flex items-center justify-between pr-4"
+                     x-show="folder.message_count > 0"
+                     :class="{
+                        'active': activeFolderId === folder.id,
+                        'font-bold text-gray-900': folder.unread_count > 0,
+                        'text-gray-600': folder.unread_count === 0
+                     }"
                      :style="'padding-left: ' + (1.5 + (getFolderLevel(folder.name) * 1.5)) + 'rem'"
                      @click="selectFolder(folder.id)">
-                    <span class="folder-icon">📁</span>
-                    <span x-text="getFolderName(folder.name)"></span>
+
+                    <div class="flex items-center truncate mr-2">
+                        <span class="folder-icon mr-2">📁</span>
+                        <span x-text="getFolderName(folder.name)" class="truncate"></span>
+                    </div>
+
+                    <!-- Badge -->
+                    <div class="folder-badge text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
+                         :class="{
+                            'bg-blue-100 text-blue-700 font-bold': folder.unread_count > 0,
+                            'bg-gray-100 text-gray-500': folder.unread_count === 0
+                         }">
+                        <span x-show="folder.unread_count > 0" x-text="folder.unread_count + ' / '"></span>
+                        <span x-text="folder.message_count"></span>
+                    </div>
                 </div>
             </template>
         </div>
@@ -238,9 +256,18 @@
                         .then(data => {
                             this.folders = data;
                             if (this.folders.length > 0) {
-                                // Try to find INBOX
-                                const inbox = this.folders.find(f => f.name.toUpperCase() === 'INBOX');
-                                this.selectFolder(inbox ? inbox.id : this.folders[0].id);
+                                // Try to find INBOX or first available folder with messages
+                                let defaultFolder = this.folders.find(f => f.name.toUpperCase() === 'INBOX' && f.message_count > 0);
+                                if (!defaultFolder) {
+                                    defaultFolder = this.folders.find(f => f.message_count > 0);
+                                }
+
+                                if (defaultFolder) {
+                                    this.selectFolder(defaultFolder.id);
+                                } else if (this.folders.length > 0) {
+                                    // Fallback if all empty, just select first one (even if hidden)
+                                    this.selectFolder(this.folders[0].id);
+                                }
                             }
                         });
                 },
@@ -471,6 +498,8 @@
                             this.activeMessageId = null;
                             this.activeMessage = null;
                             this.loadingContent = false;
+                            // Refresh folders to update counts
+                            this.fetchFolders();
                         } else {
                             alert('Error moving message: ' + (data.error || 'Unknown error'));
                             this.loadingContent = false;
