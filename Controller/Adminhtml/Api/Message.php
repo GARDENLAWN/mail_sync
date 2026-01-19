@@ -48,7 +48,7 @@ class Message extends Action
 
             $attachments[] = [
                 'id' => (int)$att->getId(),
-                'filename' => $this->ensureUtf8($att->getFilename()),
+                'filename' => $this->decodeMimeHeader($att->getFilename()), // Decode filename too
                 'size' => $att->getSize(),
                 'mime' => $att->getMimeType(),
                 'content_id' => $contentId, // Add cleaned content_id to response
@@ -56,8 +56,9 @@ class Message extends Action
             ];
         }
 
-        $subject = $this->ensureUtf8($message->getSubject());
-        $sender = $this->ensureUtf8($message->getSender());
+        // Decode MIME headers
+        $subject = $this->decodeMimeHeader($message->getSubject());
+        $sender = $this->decodeMimeHeader($message->getSender());
         $content = $this->ensureUtf8((string)$message->getContent());
 
         // Sanitize HTML content but allow formatting
@@ -81,6 +82,13 @@ class Message extends Action
         ];
 
         return $this->jsonFactory->create()->setData($data);
+    }
+
+    private function decodeMimeHeader(string $string): string
+    {
+        // Decode MIME header (e.g. =?UTF-8?B?...)
+        $decoded = iconv_mime_decode($string, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+        return $this->ensureUtf8($decoded ?: $string);
     }
 
     private function ensureUtf8(string $string): string

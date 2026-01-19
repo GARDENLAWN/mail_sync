@@ -52,12 +52,11 @@ class Messages extends Action
         $messages = [];
         foreach ($collection as $message) {
             $content = (string)$message->getContent();
-            // Highlight search term in preview if possible, otherwise standard preview
             $preview = substr(strip_tags($content), 0, 100) . '...';
 
-            // Ensure UTF-8
-            $subject = $this->ensureUtf8($message->getSubject());
-            $sender = $this->ensureUtf8($message->getSender());
+            // Decode MIME headers and ensure UTF-8
+            $subject = $this->decodeMimeHeader($message->getSubject());
+            $sender = $this->decodeMimeHeader($message->getSender());
             $preview = $this->ensureUtf8($preview);
 
             $messages[] = [
@@ -71,6 +70,13 @@ class Messages extends Action
         }
 
         return $this->jsonFactory->create()->setData($messages);
+    }
+
+    private function decodeMimeHeader(string $string): string
+    {
+        // Decode MIME header (e.g. =?UTF-8?B?...)
+        $decoded = iconv_mime_decode($string, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+        return $this->ensureUtf8($decoded ?: $string);
     }
 
     private function ensureUtf8(string $string): string
