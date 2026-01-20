@@ -25,7 +25,22 @@ class ResetCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $helper = $this->getHelper('question');
+        // Check if helper set is available, if not, skip confirmation or handle differently
+        // In Magento 2 DI context, sometimes HelperSet is not fully populated in constructor injection scenarios for commands
+        // But usually it works. The error suggests it's missing.
+
+        // Alternative: Use QuestionHelper directly if getHelper fails, but getHelper relies on helperSet.
+        // Let's try to instantiate QuestionHelper manually if needed, but standard way is via getHelper.
+
+        // Fix: Ensure parent constructor is called (it is).
+        // The issue might be how Magento instantiates commands.
+
+        // Let's try a simpler approach without the helper if it fails, or just force 'y' if interaction is not possible?
+        // No, interaction is key.
+
+        // Workaround: Instantiate QuestionHelper directly.
+        $helper = $this->getHelperSet() ? $this->getHelper('question') : new \Symfony\Component\Console\Helper\QuestionHelper();
+
         $question = new ConfirmationQuestion(
             'Are you sure you want to delete ALL synced emails and folders from Magento DB? (y/n) ',
             false
