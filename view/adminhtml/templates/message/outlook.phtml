@@ -452,6 +452,7 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
                     this.sending = true;
                     const formData = new FormData();
                     formData.append('form_key', '<?= $block->getFormKey() ?>');
+                    formData.append('website_id', this.currentWebsiteId); // Pass website_id
 
                     if (this.activeMessageId) {
                         formData.append('id', this.activeMessageId);

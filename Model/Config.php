@@ -12,10 +12,6 @@ class Config
     // Native Magento Paths
     private const XML_PATH_TRANS_EMAIL = 'trans_email/ident_general/email';
     private const XML_PATH_TRANS_NAME = 'trans_email/ident_general/name';
-    // Note: Native Magento doesn't always have system/smtp/host exposed in UI without modules,
-    // but we will use standard keys often used by SMTP modules or core if available.
-    // If you use a specific SMTP module, these might need adjustment.
-    // Assuming standard keys or that you will populate them.
     private const XML_PATH_CORE_SMTP_HOST = 'system/smtp/host';
     private const XML_PATH_CORE_SMTP_PORT = 'system/smtp/port';
 
@@ -53,9 +49,6 @@ class Config
         $smtpHost = trim((string)$this->scopeConfig->getValue(self::XML_PATH_CORE_SMTP_HOST, $scopeType, $scopeCode));
         $smtpPort = (int)$this->scopeConfig->getValue(self::XML_PATH_CORE_SMTP_PORT, $scopeType, $scopeCode);
 
-        // Fallback for SMTP if not set in system config, maybe try to guess or leave empty
-        // If empty, Transport might fail, which is expected if not configured.
-
         return new Account(
             username: $username,
             password: $password,
@@ -65,7 +58,8 @@ class Config
             imapEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_ENCRYPTION, $scopeType, $scopeCode),
             smtpHost: $smtpHost,
             smtpPort: $smtpPort,
-            smtpEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_ENCRYPTION, $scopeType, $scopeCode)
+            smtpEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_ENCRYPTION, $scopeType, $scopeCode),
+            websiteId: (int)$websiteId
         );
     }
 }

@@ -46,8 +46,15 @@ class MailMover
             throw new LocalizedException(__('Target folder not found.'));
         }
 
+        // Ensure folders belong to same website
+        if ($sourceFolder->getWebsiteId() != $targetFolder->getWebsiteId()) {
+             throw new LocalizedException(__('Cannot move message between different websites.'));
+        }
+
+        $websiteId = (int)$sourceFolder->getWebsiteId();
+
         // Connect to IMAP
-        $account = $this->config->getAccount();
+        $account = $this->config->getAccount($websiteId);
         $cm = new ClientManager();
         $client = $cm->make([
             'host'          => $account->imapHost,
@@ -83,23 +90,13 @@ class MailMover
             }
 
             // Move Message
-            // Webklex move() takes folder name or path. Path is safer.
             $status = $imapMessage->move($targetFolder->getPath());
 
             if (!$status) {
                 throw new LocalizedException(__('Failed to move message on server.'));
             }
 
-            // Update DB
-            // We need to update folder_id and potentially UID if server changed it (IMAP move usually assigns new UID)
-            // Since we don't know the new UID immediately without resyncing the target folder,
-            // we have two options:
-            // 1. Delete message from DB and let Sync recreate it in new folder later.
-            // 2. Update folder_id and hope UID stays same (unlikely) or try to fetch new UID.
-
-            // Safest: Delete from DB. The Sync will pick it up in the new folder as a "new" message.
-            // This ensures consistency.
-
+            // Update DB (Delete old, sync will pick up new)
             $this->messageResource->delete($message);
 
         } catch (\Exception $e) {

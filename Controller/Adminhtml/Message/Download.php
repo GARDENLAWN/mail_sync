@@ -61,8 +61,10 @@ class Download extends Action
             $folder = $this->folderFactory->create();
             $this->folderResource->load($folder, $message->getFolderId());
 
+            $websiteId = (int)$folder->getWebsiteId();
+
             // Connect to IMAP
-            $account = $this->config->getAccount();
+            $account = $this->config->getAccount($websiteId);
             $cm = new ClientManager();
             $client = $cm->make([
                 'host'          => $account->imapHost,
@@ -76,7 +78,6 @@ class Download extends Action
             $client->connect();
 
             // Get Folder and Message
-            // Use robust folder finding
             $imapFolder = null;
             foreach ($client->getFolders() as $f) {
                 if ($f->path === $folder->getPath()) {
@@ -86,7 +87,6 @@ class Download extends Action
             }
 
             if (!$imapFolder) {
-                // Try direct fetch if iteration failed (unlikely but fallback)
                 try {
                     $imapFolder = $client->getFolder($folder->getPath());
                 } catch (\Exception $e) {
@@ -106,7 +106,6 @@ class Download extends Action
             $attachments = $imapMessage->getAttachments();
 
             foreach ($attachments as $att) {
-                // Compare part number or filename/size as fallback
                 if ($att->getPartNumber() == $attachment->getPartNumber()) {
                     $targetAttachment = $att;
                     break;
@@ -114,7 +113,6 @@ class Download extends Action
             }
 
             if (!$targetAttachment) {
-                // Fallback: try matching by filename and size
                 foreach ($attachments as $att) {
                     if ($att->getName() == $attachment->getFilename() && $att->getSize() == $attachment->getSize()) {
                         $targetAttachment = $att;

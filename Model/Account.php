@@ -14,7 +14,8 @@ readonly class Account
         public string $imapEncryption,
         public string $smtpHost,
         public int $smtpPort,
-        public string $smtpEncryption
+        public string $smtpEncryption,
+        public int $websiteId
     ) {
     }
 }

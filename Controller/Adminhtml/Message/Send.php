@@ -10,6 +10,8 @@ use GardenLawn\MailSync\Model\Config;
 use GardenLawn\MailSync\Model\MessageDto;
 use GardenLawn\MailSync\Model\MessageFactory;
 use GardenLawn\MailSync\Model\ResourceModel\Message as MessageResource;
+use GardenLawn\MailSync\Model\FolderFactory;
+use GardenLawn\MailSync\Model\ResourceModel\Folder as FolderResource;
 use GardenLawn\MailSync\Model\Message\Status;
 use DateTimeImmutable;
 use Magento\Framework\App\Filesystem\DirectoryList;
@@ -26,6 +28,8 @@ class Send extends Action
         private readonly Config $config,
         private readonly MessageFactory $messageFactory,
         private readonly MessageResource $messageResource,
+        private readonly FolderFactory $folderFactory,
+        private readonly FolderResource $folderResource,
         private readonly Filesystem $filesystem,
         private readonly Publisher $publisher
     ) {
@@ -38,6 +42,7 @@ class Send extends Action
         $body = $this->getRequest()->getParam('reply_body');
         $to = $this->getRequest()->getParam('to');
         $subject = $this->getRequest()->getParam('subject');
+        $websiteIdParam = (int)$this->getRequest()->getParam('website_id');
 
         if (!$body) {
             $this->messageManager->addErrorMessage(__('Message body is required.'));
@@ -73,15 +78,21 @@ class Send extends Action
                 }
             }
 
-            $account = $this->config->getAccount();
-
             if ($id) {
+                // Reply Mode
                 $messageRecord = $this->messageFactory->create();
                 $this->messageResource->load($messageRecord, $id);
 
                 if (!$messageRecord->getId()) {
                     throw new \Exception(__('Original message not found.'));
                 }
+
+                // Get Website ID from original message's folder
+                $folder = $this->folderFactory->create();
+                $this->folderResource->load($folder, $messageRecord->getFolderId());
+                $websiteId = (int)$folder->getWebsiteId();
+
+                $account = $this->config->getAccount($websiteId);
 
                 $originalMessageDto = new MessageDto(
                     uid: (int)$messageRecord->getUid(),
@@ -99,9 +110,15 @@ class Send extends Action
                 $this->messageManager->addSuccessMessage(__('Reply sent successfully.'));
 
             } else {
+                // New Message Mode
                 if (!$to || !$subject) {
                     throw new \Exception(__('Recipient and Subject are required for new messages.'));
                 }
+
+                // Use website_id from param or default
+                $websiteId = $websiteIdParam ?: 0; // 0 might be admin default, but usually we want a specific store
+
+                $account = $this->config->getAccount($websiteId);
 
                 $this->mailSender->send($account, $to, $subject, $body, $attachments);
                 $this->messageManager->addSuccessMessage(__('Message sent successfully.'));
