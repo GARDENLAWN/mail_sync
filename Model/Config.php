@@ -5,6 +5,7 @@ namespace GardenLawn\MailSync\Model;
 
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Store\Model\ScopeInterface;
 
 class Config
 {
@@ -26,11 +27,19 @@ class Config
     ) {
     }
 
-    public function getAccount(): Account
+    public function getAccount(?int $websiteId = null): Account
     {
-        $username = trim((string)$this->scopeConfig->getValue(self::XML_PATH_USERNAME));
-        $password = trim((string)$this->scopeConfig->getValue(self::XML_PATH_PASSWORD));
-        $senderName = trim((string)$this->scopeConfig->getValue(self::XML_PATH_SENDER_NAME));
+        $scopeType = ScopeInterface::SCOPE_WEBSITES;
+        $scopeCode = $websiteId;
+
+        if ($websiteId === null) {
+            $scopeType = ScopeConfigInterface::SCOPE_TYPE_DEFAULT;
+            $scopeCode = null;
+        }
+
+        $username = trim((string)$this->scopeConfig->getValue(self::XML_PATH_USERNAME, $scopeType, $scopeCode));
+        $password = trim((string)$this->scopeConfig->getValue(self::XML_PATH_PASSWORD, $scopeType, $scopeCode));
+        $senderName = trim((string)$this->scopeConfig->getValue(self::XML_PATH_SENDER_NAME, $scopeType, $scopeCode));
 
         if ($password) {
              $password = $this->encryptor->decrypt($password);
@@ -40,12 +49,12 @@ class Config
             username: $username,
             password: $password,
             senderName: $senderName ?: $username,
-            imapHost: trim((string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_HOST)),
-            imapPort: (int)$this->scopeConfig->getValue(self::XML_PATH_IMAP_PORT),
-            imapEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_ENCRYPTION),
-            smtpHost: trim((string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_HOST)),
-            smtpPort: (int)$this->scopeConfig->getValue(self::XML_PATH_SMTP_PORT),
-            smtpEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_ENCRYPTION)
+            imapHost: trim((string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_HOST, $scopeType, $scopeCode)),
+            imapPort: (int)$this->scopeConfig->getValue(self::XML_PATH_IMAP_PORT, $scopeType, $scopeCode),
+            imapEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_IMAP_ENCRYPTION, $scopeType, $scopeCode),
+            smtpHost: trim((string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_HOST, $scopeType, $scopeCode)),
+            smtpPort: (int)$this->scopeConfig->getValue(self::XML_PATH_SMTP_PORT, $scopeType, $scopeCode),
+            smtpEncryption: (string)$this->scopeConfig->getValue(self::XML_PATH_SMTP_ENCRYPTION, $scopeType, $scopeCode)
         );
     }
 }

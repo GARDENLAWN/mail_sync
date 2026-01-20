@@ -8,12 +8,13 @@ use GardenLawn\MailSync\Model\Folder;
 interface FolderRepositoryInterface
 {
     /**
-     * Get or create folder by path
+     * Get or create folder by path and website
      *
      * @param string $path
      * @param string $name
+     * @param int $websiteId
      * @param string|null $delimiter
      * @return Folder
      */
-    public function getOrCreate(string $path, string $name, ?string $delimiter = null): Folder;
+    public function getOrCreate(string $path, string $name, int $websiteId, ?string $delimiter = null): Folder;
 }

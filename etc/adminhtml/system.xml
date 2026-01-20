@@ -4,65 +4,65 @@
         <tab id="gardenlawn" translate="label" sortOrder="100">
             <label>GardenLawn</label>
         </tab>
-        <section id="gardenlawn_mailsync" translate="label" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+        <section id="gardenlawn_mailsync" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
             <class>separator-top</class>
             <label>Mail Sync</label>
             <tab>gardenlawn</tab>
             <resource>GardenLawn_MailSync::config</resource>
-            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
                 <label>Account Settings</label>
 
-                <field id="sender_name" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="sender_name" translate="label" type="text" sortOrder="5" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Your Name</label>
                 </field>
-                <field id="username" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="username" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Email Address (Username)</label>
                 </field>
-                <field id="password" translate="label" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="password" translate="label" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Password</label>
                     <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
                 </field>
 
-                <group id="imap_settings" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                <group id="imap_settings" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Incoming Server (IMAP)</label>
-                    <field id="host" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <field id="host" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>IMAP Host</label>
                         <comment>e.g. pro1.mail.ovh.net</comment>
                     </field>
-                    <field id="port" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <field id="port" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>IMAP Port</label>
                         <comment>993</comment>
                     </field>
-                    <field id="encryption" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <field id="encryption" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Encryption</label>
                         <source_model>GardenLawn\MailSync\Model\Config\Source\Encryption</source_model>
                     </field>
                 </group>
 
-                <group id="smtp_settings" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0">
+                <group id="smtp_settings" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Outgoing Server (SMTP)</label>
-                    <field id="host" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <field id="host" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>SMTP Host</label>
                         <comment>e.g. pro1.mail.ovh.net</comment>
                     </field>
-                    <field id="port" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <field id="port" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>SMTP Port</label>
                         <comment>587</comment>
                     </field>
-                    <field id="encryption" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <field id="encryption" translate="label" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
                         <label>Encryption</label>
                         <source_model>GardenLawn\MailSync\Model\Config\Source\Encryption</source_model>
                     </field>
                 </group>
             </group>
 
-            <group id="commands" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+            <group id="commands" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
                 <label>Management Commands</label>
-                <field id="sync_button" translate="label" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="sync_button" translate="label" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Synchronize Now</label>
                     <frontend_model>GardenLawn\MailSync\Block\System\Config\SyncButton</frontend_model>
                 </field>
-                <field id="reset_button" translate="label" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                <field id="reset_button" translate="label" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="0">
                     <label>Reset Database</label>
                     <frontend_model>GardenLawn\MailSync\Block\System\Config\ResetButton</frontend_model>
                 </field>

@@ -33,14 +33,14 @@ class ImapSynchronizer
     ) {
     }
 
-    public function sync(Account $account, ?OutputInterface $output = null, bool $foldersOnly = false): void
+    public function sync(Account $account, int $websiteId, ?OutputInterface $output = null, bool $foldersOnly = false): void
     {
         // Step 1: Fetch Folder List
         $folderList = [];
         try {
             $client = $this->createClient($account);
             $client->connect();
-            if ($output) $output->writeln("Connected. Fetching folder list...");
+            if ($output) $output->writeln("Connected to {$account->imapHost}. Fetching folder list...");
 
             $folders = $client->getFolders();
             foreach ($folders as $f) {
@@ -66,6 +66,7 @@ class ImapSynchronizer
             $dbFolder = $this->folderRepository->getOrCreate(
                 $folderPath,
                 $folderName,
+                $websiteId,
                 $folderData['delimiter']
             );
 

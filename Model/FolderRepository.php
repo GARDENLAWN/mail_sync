@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+namespace GardenLawn\MailSync\Model\FolderRepository.php;
+
 namespace GardenLawn\MailSync\Model;
 
 use GardenLawn\MailSync\Api\FolderRepositoryInterface;
@@ -17,16 +19,17 @@ class FolderRepository implements FolderRepositoryInterface
     ) {
     }
 
-    public function getOrCreate(string $path, string $name, ?string $delimiter = null): Folder
+    public function getOrCreate(string $path, string $name, int $websiteId, ?string $delimiter = null): Folder
     {
         $collection = $this->collectionFactory->create();
         $collection->addFieldToFilter('path', $path);
+        $collection->addFieldToFilter('website_id', $websiteId);
 
         /** @var Folder $folder */
         $folder = $collection->getFirstItem();
 
         if ($folder->getId()) {
-            // Update name if changed (e.g. due to decoding fix)
+            // Update name if changed
             if ($folder->getName() !== $name) {
                 $folder->setName($name);
                 $this->folderResource->save($folder);
@@ -37,6 +40,7 @@ class FolderRepository implements FolderRepositoryInterface
         $folder = $this->folderFactory->create();
         $folder->setData('name', $name);
         $folder->setData('path', $path);
+        $folder->setData('website_id', $websiteId);
         $folder->setData('delimiter', $delimiter);
 
         $this->folderResource->save($folder);

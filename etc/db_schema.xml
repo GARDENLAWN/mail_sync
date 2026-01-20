@@ -4,15 +4,18 @@
 
     <table name="gardenlawn_mailsync_folder" resource="default" engine="innodb" comment="MailSync Folders">
         <column xsi:type="int" name="entity_id" padding="10" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="smallint" name="website_id" padding="5" unsigned="true" nullable="false" default="0" comment="Website ID"/>
         <column xsi:type="varchar" name="name" length="255" nullable="false" comment="Folder Name"/>
         <column xsi:type="varchar" name="path" length="255" nullable="false" comment="Full Folder Path"/>
         <column xsi:type="varchar" name="delimiter" length="10" nullable="true" comment="Path Delimiter"/>
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="entity_id"/>
         </constraint>
-        <constraint xsi:type="unique" referenceId="GARDENLAWN_MAILSYNC_FOLDER_PATH">
+        <constraint xsi:type="unique" referenceId="GARDENLAWN_MAILSYNC_FOLDER_PATH_WEBSITE">
             <column name="path"/>
+            <column name="website_id"/>
         </constraint>
+        <constraint xsi:type="foreign" referenceId="GARDENLAWN_MAILSYNC_FOLDER_WEBSITE_FK" table="gardenlawn_mailsync_folder" column="website_id" referenceTable="store_website" referenceColumn="website_id" onDelete="CASCADE"/>
     </table>
 
     <table name="gardenlawn_mailsync_message" resource="default" engine="innodb" comment="MailSync Messages">
@@ -53,6 +56,7 @@
         <column xsi:type="varchar" name="mime_type" length="100" nullable="true" comment="Mime Type"/>
         <column xsi:type="int" name="size" padding="10" unsigned="true" nullable="true" comment="Size in bytes"/>
         <column xsi:type="varchar" name="part_number" length="50" nullable="false" comment="IMAP Part Number"/>
+        <column xsi:type="varchar" name="content_id" length="255" nullable="true" comment="Content-ID"/>
 
         <constraint xsi:type="primary" referenceId="PRIMARY">
             <column name="entity_id"/>

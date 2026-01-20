@@ -6,6 +6,7 @@ namespace GardenLawn\MailSync\Model\Queue;
 use GardenLawn\MailSync\Model\Config;
 use Webklex\PHPIMAP\ClientManager;
 use Psr\Log\LoggerInterface;
+use Laminas\Mail\Message as LaminasMessage;
 
 class SentConsumer
 {
@@ -18,7 +19,16 @@ class SentConsumer
     public function process(string $rawMessage): void
     {
         try {
-            $account = $this->config->getAccount();
+            // Parse message to get Website ID header
+            $message = LaminasMessage::fromString($rawMessage);
+            $headers = $message->getHeaders();
+
+            $websiteId = null;
+            if ($headers->has('X-Magento-Website-Id')) {
+                $websiteId = (int)$headers->get('X-Magento-Website-Id')->getFieldValue();
+            }
+
+            $account = $this->config->getAccount($websiteId);
 
             $cm = new ClientManager();
             $client = $cm->make([
@@ -74,8 +84,6 @@ class SentConsumer
 
         } catch (\Exception $e) {
             $this->logger->error('MailSync SentConsumer Error: ' . $e->getMessage());
-            // We do not re-throw to avoid infinite retry loops for bad messages,
-            // but in production you might want to use Dead Letter Queue.
         }
     }
 }

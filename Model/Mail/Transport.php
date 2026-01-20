@@ -7,6 +7,7 @@ use Magento\Framework\Mail\TransportInterface;
 use Magento\Framework\Mail\MessageInterface;
 use GardenLawn\MailSync\Model\Config;
 use GardenLawn\MailSync\Model\Queue\SentPublisher;
+use Magento\Store\Model\StoreManagerInterface;
 use Laminas\Mail\Message as LaminasMessage;
 use Laminas\Mail\Transport\Smtp as SmtpTransport;
 use Laminas\Mail\Transport\SmtpOptions;
@@ -16,7 +17,8 @@ class Transport implements TransportInterface
     public function __construct(
         private readonly MessageInterface $message,
         private readonly Config $config,
-        private readonly SentPublisher $sentPublisher
+        private readonly SentPublisher $sentPublisher,
+        private readonly StoreManagerInterface $storeManager
     ) {
     }
 
@@ -27,7 +29,17 @@ class Transport implements TransportInterface
 
     public function sendMessage(): void
     {
-        $account = $this->config->getAccount();
+        try {
+            $websiteId = (int)$this->storeManager->getWebsite()->getId();
+        } catch (\Exception $e) {
+            $websiteId = 0; // Default/Admin
+        }
+
+        $account = $this->config->getAccount($websiteId);
+
+        // If no account configured for this website, fallback to default or throw error?
+        // Let's assume fallback to default config (websiteId=null in getAccount handles scope logic)
+        // Actually getAccount handles scope resolution if we pass websiteId.
 
         $laminasMessage = null;
         if ($this->message instanceof LaminasMessage) {
@@ -42,6 +54,8 @@ class Transport implements TransportInterface
 
         // Mark as SYSTEM message for Sync detection
         $laminasMessage->getHeaders()->addHeaderLine('X-Magento-Type', 'system');
+        // Add Website ID header so Consumer knows where to append
+        $laminasMessage->getHeaders()->addHeaderLine('X-Magento-Website-Id', (string)$websiteId);
 
         $options = new SmtpOptions([
             'name' => 'localhost',
