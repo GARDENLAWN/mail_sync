@@ -2,36 +2,72 @@
 /** @var \GardenLawn\MailSync\Block\Adminhtml\Message\Outlook $block */
 $currentWebsiteId = $block->getCurrentWebsiteId();
 ?>
-<div class="mailsync-outlook" x-data="mailSyncApp()" x-init="init()">
+<style>
+    /* Fallback styles in case Tailwind is not rebuilt yet */
+    .mailsync-btn-primary {
+        background: linear-gradient(to right, #2563eb, #1d4ed8) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    }
+    .mailsync-btn-primary:hover {
+        background: linear-gradient(to right, #1d4ed8, #1e40af) !important;
+        transform: translateY(-2px);
+    }
+
+    .mailsync-btn-secondary {
+        background-color: white !important;
+        border: 1px solid #d1d5db !important;
+        color: #374151 !important;
+        border-radius: 9999px !important; /* Pill shape */
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+    }
+    .mailsync-btn-secondary:hover {
+        background-color: #f9fafb !important;
+        border-color: #9ca3af !important;
+        color: #111827 !important;
+    }
+
+    /* Fix for Magento admin buttons overriding */
+    button.mailsync-btn-primary span, button.mailsync-btn-secondary span {
+        color: inherit !important;
+    }
+</style>
+
+<!-- Main Container -->
+<div class="flex h-[calc(100vh-13rem)] bg-white border border-gray-300 rounded-xl shadow-lg overflow-hidden font-sans mt-4 text-gray-700" x-data="mailSyncApp()" x-init="init()">
 
     <!-- Left Sidebar: Folders -->
-    <div class="mailsync-sidebar">
-        <div class="mailsync-sidebar-header">
-            <button class="action-btn primary w-full flex items-center justify-center gap-2" @click="composeEmail()">
-                <span class="text-xl">+</span>
+    <div class="w-64 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
+        <div class="p-4">
+            <button class="w-full mailsync-btn-primary !font-bold !py-3 !px-4 !rounded-lg !transition-all !duration-200 flex items-center justify-center gap-2" @click="composeEmail()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
                 <span>New Message</span>
             </button>
         </div>
-        <div class="mailsync-folders-list">
+        <div class="flex-1 overflow-y-auto px-3 pb-4 space-y-1">
             <template x-for="folder in folders" :key="folder.id">
-                <div class="mailsync-folder-item"
+                <div class="group flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer text-sm transition-all duration-150 border border-transparent"
                      x-show="folder.message_count > 0"
                      :class="{
-                        'active': activeFolderId === folder.id
+                        'bg-white text-blue-700 font-bold shadow-sm border-gray-200': activeFolderId === folder.id,
+                        'text-gray-600 hover:bg-gray-200 hover:text-gray-900': activeFolderId !== folder.id
                      }"
-                     :style="'padding-left: ' + (1 + (getFolderLevel(folder.path, folder.delimiter) * 1.2)) + 'rem'"
+                     :style="'padding-left: ' + (0.75 + (getFolderLevel(folder.path, folder.delimiter) * 1)) + 'rem'"
                      @click="selectFolder(folder.id)">
 
-                    <div class="flex items-center truncate mr-2 flex-1">
-                        <div class="folder-icon-wrapper" x-html="getFolderIcon(folder.name)"></div>
-                        <span x-text="getFolderName(folder.name, folder.path, folder.delimiter)" class="folder-name truncate"></span>
+                    <div class="flex items-center truncate mr-2 flex-1 gap-3">
+                        <div class="shrink-0 transition-colors" :class="activeFolderId === folder.id ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'" x-html="getFolderIcon(folder.name)"></div>
+                        <span x-text="getFolderName(folder.name, folder.path, folder.delimiter)" class="truncate"></span>
                     </div>
 
                     <!-- Badge -->
-                    <div class="folder-badge"
+                    <div class="px-2 py-0.5 rounded-md text-xs font-bold shrink-0 transition-colors"
                          :class="{
-                            'unread': folder.unread_count > 0,
-                            'total': folder.unread_count === 0
+                            'bg-blue-100 text-blue-700': folder.unread_count > 0,
+                            'text-gray-400 bg-gray-100 group-hover:bg-gray-300': folder.unread_count === 0
                          }">
                         <span x-show="folder.unread_count > 0" x-text="folder.unread_count"></span>
                         <span x-show="folder.unread_count === 0" x-text="folder.message_count"></span>
@@ -42,37 +78,51 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
     </div>
 
     <!-- Middle Column: Message List -->
-    <div class="mailsync-message-list">
-        <div class="mailsync-list-header">
-            <div class="relative">
+    <div class="w-80 border-r border-gray-200 flex flex-col bg-white shrink-0">
+        <div class="p-4 border-b border-gray-200 bg-white z-10">
+            <div class="relative group">
                 <input type="text"
-                       placeholder="Search..."
-                       class="admin__control-text !w-full !pl-10"
+                       placeholder="Search messages..."
+                       class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all"
                        x-model="searchQuery"
                        @input.debounce.500ms="performSearch()">
-                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                 </div>
             </div>
         </div>
-        <!-- Added @scroll handler for infinite scrolling -->
-        <div class="mailsync-list-content" @scroll="handleScroll($event)">
+
+        <div class="flex-1 overflow-y-auto" @scroll="handleScroll($event)">
             <template x-if="loadingMessages && messages.length === 0">
-                <div class="p-8 text-center text-gray-400">Loading...</div>
+                <div class="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
+                    <svg class="animate-spin h-6 w-6 text-blue-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading...
+                </div>
             </template>
 
             <template x-for="msg in messages" :key="msg.id">
-                <div class="mailsync-message-item"
-                     :class="{ 'active': activeMessageId === msg.id, 'unread': msg.status === 'unread' }"
+                <div class="p-4 border-b border-gray-100 cursor-pointer transition-all hover:bg-gray-50 relative group"
+                     :class="{ 'bg-blue-50 hover:bg-blue-50': activeMessageId === msg.id }"
                      @click="selectMessage(msg.id)">
-                    <div class="msg-sender">
-                        <span class="truncate" x-text="msg.sender"></span>
-                        <span class="msg-date" x-text="formatDateShort(msg.date)"></span>
+
+                    <!-- Active Indicator -->
+                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-r" x-show="activeMessageId === msg.id"></div>
+
+                    <div class="flex justify-between items-baseline mb-1.5">
+                        <span class="text-sm truncate pr-2"
+                              :class="msg.status === 'unread' ? 'font-bold text-gray-900' : 'text-gray-700 font-medium'"
+                              x-text="msg.sender"></span>
+                        <span class="text-xs text-gray-400 shrink-0" x-text="formatDateShort(msg.date)"></span>
                     </div>
-                    <div class="msg-subject truncate" x-text="msg.subject"></div>
-                    <div class="msg-preview" x-text="msg.preview"></div>
+                    <div class="text-sm mb-1 truncate"
+                         :class="msg.status === 'unread' ? 'font-bold text-gray-800' : 'text-gray-600'"
+                         x-text="msg.subject"></div>
+                    <div class="text-xs text-gray-500 truncate leading-relaxed" x-text="msg.preview"></div>
                 </div>
             </template>
 
@@ -82,38 +132,49 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
             </template>
 
             <template x-if="!hasMoreMessages && messages.length > 0">
-                <div class="p-4 text-center text-xs text-gray-400">End of list</div>
+                <div class="p-4 text-center text-xs text-gray-400 border-t border-gray-100">End of list</div>
             </template>
 
             <template x-if="!loadingMessages && messages.length === 0">
-                <div class="p-8 text-center text-gray-500 flex flex-col items-center mt-10">
-                    <div class="text-4xl mb-4 opacity-30">📭</div>
-                    <p x-text="searchQuery ? 'No messages found.' : 'Folder is empty.'"></p>
+                <div class="p-12 text-center text-gray-500 flex flex-col items-center">
+                    <div class="text-5xl mb-4 opacity-20">📭</div>
+                    <p class="text-sm font-medium" x-text="searchQuery ? 'No messages found.' : 'Folder is empty.'"></p>
                 </div>
             </template>
         </div>
     </div>
 
     <!-- Right Column: Message View -->
-    <div class="mailsync-message-view">
+    <div class="flex-1 overflow-y-auto bg-white p-6 relative min-w-0">
         <template x-if="!activeMessage && !isComposing">
-            <div class="empty-state">
-                <div class="empty-icon">✉️</div>
-                <p>Select an item to read</p>
+            <div class="h-full flex flex-col items-center justify-center text-gray-400">
+                <div class="bg-gray-50 p-6 rounded-full mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 opacity-50 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                </div>
+                <p class="text-lg font-medium text-gray-500">Select an item to read</p>
             </div>
         </template>
 
         <template x-if="loadingContent">
-            <div class="p-8 text-center text-gray-500">Loading content...</div>
+            <div class="h-full flex items-center justify-center text-gray-500">
+                <svg class="animate-spin -ml-1 mr-3 h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="font-medium">Loading content...</span>
+            </div>
         </template>
 
         <template x-if="activeMessage && !loadingContent && !isComposing">
-            <div class="message-detail">
-                <div class="message-header">
-                    <div class="flex justify-between items-start mb-4">
-                        <h2 x-text="activeMessage.subject"></h2>
-                        <div class="flex gap-2">
-                            <button class="action-btn secondary text-red-600 hover:text-red-800 hover:bg-red-50 px-3" @click="deleteMessage()" title="Delete">
+            <div class="w-full h-full flex flex-col">
+                <!-- Header -->
+                <div class="border-b border-gray-200 pb-6 mb-6 shrink-0">
+                    <div class="flex justify-between items-start mb-5">
+                        <h2 class="text-2xl font-bold text-gray-900 leading-tight" x-text="activeMessage.subject"></h2>
+                        <div class="flex gap-2 shrink-0 ml-4">
+                            <button class="text-gray-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors" @click="deleteMessage()" title="Delete">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
@@ -121,35 +182,36 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
                         </div>
                     </div>
 
-                    <div class="message-meta">
-                        <div class="sender-avatar" x-text="getInitials(activeMessage.sender)"></div>
-                        <div class="meta-info">
-                            <div class="sender-name" x-text="activeMessage.sender"></div>
-                            <div class="message-date" x-text="formatDateFull(activeMessage.date)"></div>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-lg font-bold shadow-md shrink-0" x-text="getInitials(activeMessage.sender)"></div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-gray-900 text-lg truncate" x-text="activeMessage.sender"></div>
+                            <div class="text-sm text-gray-500" x-text="formatDateFull(activeMessage.date)"></div>
                         </div>
-                        <div class="message-actions flex gap-2 relative">
-                            <button class="action-btn secondary flex items-center gap-2" @click="replyToMessage()">
+
+                        <div class="flex gap-3 shrink-0 relative">
+                            <button class="flex items-center gap-2 mailsync-btn-secondary !px-4 !py-2 !text-sm !font-semibold !transition-all !shadow-sm" @click="replyToMessage()">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                                 </svg>
                                 Reply
                             </button>
 
-                            <!-- Move Button & Dropdown -->
+                            <!-- Move Dropdown -->
                             <div class="relative" @click.away="showMoveDropdown = false">
-                                <button class="action-btn secondary flex items-center gap-2" @click="showMoveDropdown = !showMoveDropdown">
+                                <button class="flex items-center gap-2 mailsync-btn-secondary !px-4 !py-2 !text-sm !font-semibold !transition-all !shadow-sm" @click="showMoveDropdown = !showMoveDropdown">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                                     </svg>
                                     Move
                                 </button>
-                                <div class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-64 overflow-y-auto" x-show="showMoveDropdown" style="display: none;">
+                                <div class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-20 max-h-64 overflow-y-auto py-1" x-show="showMoveDropdown" style="display: none;">
                                     <template x-for="folder in folders" :key="folder.id">
-                                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm flex items-center gap-2"
+                                        <div class="px-4 py-2.5 hover:bg-gray-50 cursor-pointer text-sm flex items-center gap-3 text-gray-700 transition-colors"
                                              x-show="folder.id !== activeFolderId"
                                              @click="moveMessage(folder.id)">
-                                            <span class="text-gray-400" x-html="getFolderIcon(folder.name)"></span>
-                                            <span x-text="folder.name"></span>
+                                            <span class="text-gray-400 shrink-0" x-html="getFolderIcon(folder.name)"></span>
+                                            <span class="truncate font-medium" x-text="folder.name"></span>
                                         </div>
                                     </template>
                                 </div>
@@ -158,101 +220,105 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
                     </div>
                 </div>
 
-                <!-- IFRAME for Message Body -->
-                <div class="message-body-container mb-8 w-full">
-                    <iframe x-ref="messageFrame"
-                            class="w-full border-none"
-                            style="min-height: 200px; display: block;"
-                            frameborder="0"></iframe>
-                </div>
-
-                <!-- Images displayed as content (only those NOT inline) -->
-                <template x-if="activeMessage.attachments && hasImageAttachments(activeMessage.attachments)">
-                    <div class="message-images-content mb-8">
-                        <template x-for="att in getImageAttachments(activeMessage.attachments)" :key="att.id">
-                            <div class="mb-6">
-                                <img :src="att.download_url" class="max-w-full h-auto rounded shadow-sm border border-gray-100" :alt="att.filename" loading="lazy">
-                            </div>
-                        </template>
+                <!-- Message Body -->
+                <div class="flex-1 overflow-y-auto pr-2">
+                    <div class="mb-8 w-full bg-white">
+                        <iframe x-ref="messageFrame"
+                                class="w-full border-none block"
+                                style="min-height: 300px;"
+                                frameborder="0"></iframe>
                     </div>
-                </template>
 
-                <!-- Non-image Attachments -->
-                <template x-if="activeMessage.attachments && hasNonImageAttachments(activeMessage.attachments)">
-                    <div class="message-attachments">
-                        <h4 class="mb-4 text-gray-500 uppercase text-xs font-bold tracking-wide flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                            </svg>
-                            Attachments
-                        </h4>
-                        <div class="attachments-grid">
-                            <template x-for="att in getNonImageAttachments(activeMessage.attachments)" :key="att.id">
-                                <a :href="att.download_url" target="_blank" class="attachment-card">
-                                    <span class="att-icon w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
-                                          :class="getFileTypeClass(att.filename, att.mime)"
-                                          x-text="getFileExtension(att.filename)"></span>
-                                    <span class="att-name truncate max-w-[150px]" x-text="att.filename"></span>
-                                    <span class="att-size" x-text="formatSize(att.size)"></span>
-                                </a>
+                    <!-- Inline Images -->
+                    <template x-if="activeMessage.attachments && hasImageAttachments(activeMessage.attachments)">
+                        <div class="mb-8 space-y-4">
+                            <template x-for="att in getImageAttachments(activeMessage.attachments)" :key="att.id">
+                                <div class="border border-gray-200 rounded-lg overflow-hidden inline-block max-w-full shadow-sm">
+                                    <img :src="att.download_url" class="max-w-full h-auto block" :alt="att.filename" loading="lazy">
+                                </div>
                             </template>
                         </div>
-                    </div>
-                </template>
+                    </template>
+
+                    <!-- Attachments -->
+                    <template x-if="activeMessage.attachments && hasNonImageAttachments(activeMessage.attachments)">
+                        <div class="border-t border-gray-200 pt-6 mt-6 pb-6">
+                            <h4 class="mb-4 text-gray-500 uppercase text-xs font-bold tracking-wider flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                Attachments
+                            </h4>
+                            <div class="flex flex-wrap gap-3">
+                                <template x-for="att in getNonImageAttachments(activeMessage.attachments)" :key="att.id">
+                                    <a :href="att.download_url" target="_blank" class="flex items-center px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-md transition-all text-gray-700 no-underline group">
+                                        <span class="w-8 h-8 flex items-center justify-center rounded text-white font-bold text-[10px] mr-3 shrink-0 shadow-sm"
+                                              :class="getFileTypeClass(att.filename, att.mime)"
+                                              x-text="getFileExtension(att.filename)"></span>
+                                        <div class="flex flex-col overflow-hidden">
+                                            <span class="text-sm font-semibold truncate max-w-[200px] group-hover:text-blue-600 transition-colors" x-text="att.filename"></span>
+                                            <span class="text-xs text-gray-400" x-text="formatSize(att.size)"></span>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
         </template>
 
         <!-- Compose / Reply Mode -->
-        <div class="compose-view" x-show="isComposing" style="display: none;">
-            <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
-                <h3 class="text-2xl text-gray-800" x-text="activeMessageId ? 'Reply' : 'New Message'"></h3>
-                <button @click="isComposing = false" class="text-gray-400 hover:text-gray-600">
+        <div class="h-full flex flex-col w-full" x-show="isComposing" style="display: none;">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 shrink-0">
+                <h3 class="text-2xl font-bold text-gray-800" x-text="activeMessageId ? 'Reply' : 'New Message'"></h3>
+                <button @click="isComposing = false" class="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
-            <form @submit.prevent="sendMessage" class="flex-1 flex flex-col h-full">
+            <form @submit.prevent="sendMessage" class="flex-1 flex flex-col min-h-0">
 
-                <div class="field mb-4">
-                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">To</label>
-                    <input type="text" x-model="composeTo" class="admin__control-text !w-full p-3 border-gray-300 rounded" :readonly="!!activeMessageId">
+                <div class="mb-4">
+                    <label class="block mb-1.5 font-semibold text-gray-700 text-sm">To</label>
+                    <input type="text" x-model="composeTo" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm" :readonly="!!activeMessageId">
                 </div>
 
-                <div class="field mb-4">
-                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">Subject</label>
-                    <input type="text" x-model="composeSubject" class="admin__control-text !w-full p-3 border-gray-300 rounded" :readonly="!!activeMessageId">
+                <div class="mb-4">
+                    <label class="block mb-1.5 font-semibold text-gray-700 text-sm">Subject</label>
+                    <input type="text" x-model="composeSubject" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow shadow-sm" :readonly="!!activeMessageId">
                 </div>
 
-                <div class="field flex-1 mb-4 flex flex-col">
-                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">Message</label>
-                    <textarea x-model="composeBody" class="admin__control-textarea !w-full flex-1 p-4 border-gray-300 rounded resize-none font-sans text-base" placeholder="Type your message..."></textarea>
+                <div class="flex-1 mb-4 flex flex-col min-h-0">
+                    <label class="block mb-1.5 font-semibold text-gray-700 text-sm">Message</label>
+                    <textarea x-model="composeBody" class="w-full flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow resize-none font-sans text-base leading-relaxed shadow-sm" placeholder="Type your message..."></textarea>
                 </div>
 
-                <div class="field mb-6">
-                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">Attachments</label>
+                <div class="mb-6">
+                    <label class="block mb-2 font-semibold text-gray-700 text-sm">Attachments</label>
                     <div class="flex items-center gap-4">
-                        <label class="cursor-pointer action-btn secondary flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <label class="cursor-pointer inline-flex items-center gap-2 !px-4 !py-2 !border !border-gray-300 !rounded-full !text-sm !font-semibold !text-gray-700 !bg-white hover:!bg-gray-50 hover:!border-gray-400 !transition-all !shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                             </svg>
                             <span>Add Files</span>
                             <input type="file" multiple @change="handleFileUpload($event)" class="hidden"/>
                         </label>
-                        <span class="text-gray-400 text-sm" x-show="filesToUpload.length === 0">No files selected</span>
+                        <span class="text-gray-400 text-sm italic" x-show="filesToUpload.length === 0">No files selected</span>
                     </div>
 
                     <!-- New Attachments Preview -->
-                    <div class="mt-4 flex flex-wrap gap-3" x-show="filesToUpload.length > 0">
+                    <div class="mt-3 flex flex-wrap gap-3" x-show="filesToUpload.length > 0">
                         <template x-for="(file, index) in filesToUpload" :key="index">
-                            <div class="attachment-card pr-2">
-                                <span class="att-icon w-6 h-6 flex items-center justify-center rounded text-white font-bold text-[10px]"
+                            <div class="flex items-center px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+                                <span class="w-6 h-6 flex items-center justify-center rounded text-white font-bold text-[10px] mr-2"
                                       :class="getFileTypeClass(file.name, file.type)"
                                       x-text="getFileExtension(file.name)"></span>
-                                <span class="att-name text-sm" x-text="file.name"></span>
-                                <span class="att-size text-xs" x-text="formatSize(file.size)"></span>
-                                <button type="button" @click="removeFile(index)" class="ml-2 text-gray-400 hover:text-red-500">
+                                <span class="text-sm text-gray-700 mr-2 font-medium" x-text="file.name"></span>
+                                <span class="text-xs text-gray-400 mr-3" x-text="formatSize(file.size)"></span>
+                                <button type="button" @click="removeFile(index)" class="text-gray-400 hover:text-red-500 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                                     </svg>
@@ -262,9 +328,9 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
                     </div>
                 </div>
 
-                <div class="actions pt-4 border-t border-gray-200 flex justify-end gap-3">
-                    <button type="button" class="action-btn secondary" @click="isComposing = false">Cancel</button>
-                    <button type="submit" class="action-btn primary px-8" :disabled="sending">
+                <div class="pt-4 border-t border-gray-200 flex justify-end gap-3">
+                    <button type="button" class="mailsync-btn-secondary !px-5 !py-2.5 !text-sm !font-semibold !transition-all !shadow-sm" @click="isComposing = false">Cancel</button>
+                    <button type="submit" class="mailsync-btn-primary !px-8 !py-2.5 !rounded-lg !text-sm !font-bold !transition-all !transform hover:!-translate-y-0.5 disabled:!opacity-50 disabled:!cursor-not-allowed" :disabled="sending">
                         <span x-show="!sending">Send Message</span>
                         <span x-show="sending">Sending...</span>
                     </button>
@@ -651,15 +717,15 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
 
                 getFileTypeClass(filename, mime) {
                     const ext = filename.split('.').pop().toLowerCase();
-                    if (['pdf'].includes(ext)) return 'type-pdf';
-                    if (this.isImage(filename, mime)) return 'type-image';
-                    if (['doc', 'docx', 'rtf'].includes(ext)) return 'type-word';
-                    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'type-excel';
-                    if (['ppt', 'pptx'].includes(ext)) return 'type-powerpoint';
-                    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'type-archive';
-                    if (['php', 'js', 'css', 'html', 'xml', 'json'].includes(ext)) return 'type-code';
-                    if (['txt', 'md'].includes(ext)) return 'type-text';
-                    return 'type-default';
+                    if (['pdf'].includes(ext)) return 'bg-red-500';
+                    if (this.isImage(filename, mime)) return 'bg-blue-500';
+                    if (['doc', 'docx', 'rtf'].includes(ext)) return 'bg-blue-600';
+                    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'bg-green-600';
+                    if (['ppt', 'pptx'].includes(ext)) return 'bg-orange-500';
+                    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'bg-yellow-400 text-gray-800';
+                    if (['php', 'js', 'css', 'html', 'xml', 'json'].includes(ext)) return 'bg-gray-700';
+                    if (['txt', 'md'].includes(ext)) return 'bg-gray-400';
+                    return 'bg-gray-500';
                 },
 
                 hasImageAttachments(attachments) {

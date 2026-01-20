@@ -4,7 +4,8 @@
         <!-- Alpine is loaded via RequireJS in the template or by Hyva Admin base -->
     </head>
     <body>
-        <referenceContainer name="content">
+        <!-- Move Store Switcher to the top actions bar -->
+        <referenceContainer name="page.main.actions">
             <block class="Magento\Backend\Block\Store\Switcher" name="store_switcher" template="Magento_Backend::store/switcher.phtml">
                 <arguments>
                     <argument name="use_confirm" xsi:type="string">0</argument>
@@ -13,6 +14,9 @@
                     <argument name="switch_store_views" xsi:type="string">0</argument>
                 </arguments>
             </block>
+        </referenceContainer>
+
+        <referenceContainer name="content">
             <block class="GardenLawn\MailSync\Block\Adminhtml\Message\Outlook" name="gardenlawn_mailsync_outlook" template="GardenLawn_MailSync::message/outlook.phtml"/>
         </referenceContainer>
     </body>
