@@ -8,7 +8,7 @@ use GardenLawn\MailSync\Api\MessageRepositoryInterface;
 use GardenLawn\MailSync\Model\Account;
 use GardenLawn\MailSync\Model\MessageDto;
 use GardenLawn\MailSync\Model\Message\Status;
-use Webklex\PHPIMAP\ClientManager;
+use GardenLawn\MailSync\Model\Queue\SentPublisher;
 use Laminas\Mail\Message as LaminasMessage;
 use Laminas\Mail\Transport\Smtp as SmtpTransport;
 use Laminas\Mail\Transport\SmtpOptions;
@@ -19,7 +19,8 @@ use Laminas\Mime\Mime;
 class MailSender implements MailSenderInterface
 {
     public function __construct(
-        private readonly MessageRepositoryInterface $messageRepository
+        private readonly MessageRepositoryInterface $messageRepository,
+        private readonly SentPublisher $sentPublisher
     ) {
     }
 
@@ -112,19 +113,6 @@ class MailSender implements MailSenderInterface
 
     private function appendSentMessage(Account $account, string $to, string $subject, MimeMessage $mimeMessage): void
     {
-        $cm = new ClientManager();
-        $client = $cm->make([
-            'host'          => $account->imapHost,
-            'port'          => $account->imapPort,
-            'encryption'    => $account->imapEncryption,
-            'validate_cert' => false,
-            'username'      => $account->username,
-            'password'      => $account->password,
-            'protocol'      => 'imap'
-        ]);
-
-        $client->connect();
-
         $message = new LaminasMessage();
         $message->setBody($mimeMessage);
         $message->setFrom($account->username, $account->senderName);
@@ -133,22 +121,8 @@ class MailSender implements MailSenderInterface
         $message->setEncoding('UTF-8');
         $message->getHeaders()->addHeaderLine('Date', date('r'));
 
-        $rawMessage = $message->toString();
-
-        try {
-            $sentFolder = $client->getFolder('Sent');
-        } catch (\Exception $e) {
-            try {
-                $sentFolder = $client->getFolder('Wysłane');
-            } catch (\Exception $e) {
-                $client->disconnect();
-                return;
-            }
-        }
-
-        $sentFolder->appendMessage($rawMessage, ['\Seen']);
-
-        $client->disconnect();
+        // Async archive to Sent folder
+        $this->sentPublisher->publish($message->toString());
     }
 
     private function prepareSubject(string $originalSubject): string

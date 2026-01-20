@@ -2,5 +2,6 @@
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/topology.xsd">
     <exchange name="magento-db" type="topic" connection="amqp">
         <binding id="gardenlawn_mail_sync_binding" topic="gardenlawn.mail.sync" destinationType="queue" destination="gardenlawn_mail_sync"/>
+        <binding id="gardenlawn_mail_sent_binding" topic="gardenlawn.mail.sent" destinationType="queue" destination="gardenlawn_mail_sent"/>
     </exchange>
 </config>
