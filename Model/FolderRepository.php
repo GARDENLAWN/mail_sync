@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 
-namespace GardenLawn\MailSync\Model\FolderRepository.php;
-
 namespace GardenLawn\MailSync\Model;
 
 use GardenLawn\MailSync\Api\FolderRepositoryInterface;
