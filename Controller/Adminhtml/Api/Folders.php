@@ -22,8 +22,14 @@ class Folders extends Action
 
     public function execute()
     {
+        $websiteId = (int)$this->getRequest()->getParam('website_id');
+
         $collection = $this->collectionFactory->create();
         $collection->setOrder('name', 'ASC');
+
+        if ($websiteId) {
+            $collection->addFieldToFilter('website_id', $websiteId);
+        }
 
         // Get message counts grouped by folder_id
         $counts = $this->getMessageCounts();
