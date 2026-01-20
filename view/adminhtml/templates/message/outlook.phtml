@@ -6,36 +6,35 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
 
     <!-- Left Sidebar: Folders -->
     <div class="mailsync-sidebar">
-        <div class="mailsync-sidebar-header p-4">
-            <button class="action-btn primary w-full" @click="composeEmail()">
+        <div class="mailsync-sidebar-header">
+            <button class="action-btn primary w-full flex items-center justify-center gap-2" @click="composeEmail()">
+                <span class="text-xl">+</span>
                 <span>New Message</span>
             </button>
         </div>
-        <div class="mailsync-folders-list flex-1 overflow-y-auto">
+        <div class="mailsync-folders-list">
             <template x-for="folder in folders" :key="folder.id">
-                <div class="mailsync-folder-item flex items-center justify-between pr-4"
+                <div class="mailsync-folder-item"
                      x-show="folder.message_count > 0"
                      :class="{
-                        'active': activeFolderId === folder.id,
-                        'font-bold text-gray-900': folder.unread_count > 0,
-                        'text-gray-600': folder.unread_count === 0
+                        'active': activeFolderId === folder.id
                      }"
-                     :style="'padding-left: ' + (1.5 + (getFolderLevel(folder.name) * 1.5)) + 'rem'"
+                     :style="'padding-left: ' + (1 + (getFolderLevel(folder.path, folder.delimiter) * 1.2)) + 'rem'"
                      @click="selectFolder(folder.id)">
 
-                    <div class="flex items-center truncate mr-2">
-                        <span class="folder-icon mr-2">📁</span>
-                        <span x-text="getFolderName(folder.name)" class="truncate"></span>
+                    <div class="flex items-center truncate mr-2 flex-1">
+                        <div class="folder-icon-wrapper" x-html="getFolderIcon(folder.name)"></div>
+                        <span x-text="getFolderName(folder.name, folder.path, folder.delimiter)" class="folder-name truncate"></span>
                     </div>
 
                     <!-- Badge -->
-                    <div class="folder-badge text-xs px-2 py-0.5 rounded-full whitespace-nowrap"
+                    <div class="folder-badge"
                          :class="{
-                            'bg-blue-100 text-blue-700 font-bold': folder.unread_count > 0,
-                            'bg-gray-100 text-gray-500': folder.unread_count === 0
+                            'unread': folder.unread_count > 0,
+                            'total': folder.unread_count === 0
                          }">
-                        <span x-show="folder.unread_count > 0" x-text="folder.unread_count + ' / '"></span>
-                        <span x-text="folder.message_count"></span>
+                        <span x-show="folder.unread_count > 0" x-text="folder.unread_count"></span>
+                        <span x-show="folder.unread_count === 0" x-text="folder.message_count"></span>
                     </div>
                 </div>
             </template>
@@ -43,91 +42,118 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
     </div>
 
     <!-- Middle Column: Message List -->
-    <div class="mailsync-message-list w-[350px] border-r border-gray-200 flex flex-col bg-white">
-        <div class="mailsync-list-header p-4 border-b border-gray-200">
-            <input type="text"
-                   placeholder="Search sender, subject, content..."
-                   class="admin__control-text !w-full"
-                   x-model="searchQuery"
-                   @input.debounce.500ms="performSearch()">
+    <div class="mailsync-message-list">
+        <div class="mailsync-list-header">
+            <div class="relative">
+                <input type="text"
+                       placeholder="Search..."
+                       class="admin__control-text !w-full !pl-10"
+                       x-model="searchQuery"
+                       @input.debounce.500ms="performSearch()">
+                <div class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
         </div>
         <!-- Added @scroll handler for infinite scrolling -->
-        <div class="mailsync-list-content flex-1 overflow-y-auto" @scroll="handleScroll($event)">
+        <div class="mailsync-list-content" @scroll="handleScroll($event)">
             <template x-if="loadingMessages && messages.length === 0">
-                <div class="p-4 text-center">Loading...</div>
+                <div class="p-8 text-center text-gray-400">Loading...</div>
             </template>
 
             <template x-for="msg in messages" :key="msg.id">
-                <div class="mailsync-message-item p-5 border-b border-gray-100 cursor-pointer transition-colors hover:bg-gray-50"
-                     :class="{ 'active bg-blue-50 border-l-4 border-blue-500': activeMessageId === msg.id, 'unread': msg.status === 'unread' }"
+                <div class="mailsync-message-item"
+                     :class="{ 'active': activeMessageId === msg.id, 'unread': msg.status === 'unread' }"
                      @click="selectMessage(msg.id)">
-                    <div class="msg-sender text-sm text-gray-800 mb-1 truncate" x-text="msg.sender"></div>
-                    <div class="msg-subject text-sm text-gray-600 mb-1" :class="{ 'font-bold text-black': msg.status === 'unread' }" x-text="msg.subject"></div>
-                    <div class="msg-preview text-xs text-gray-500 truncate" x-text="msg.preview"></div>
-                    <div class="msg-date text-xs text-gray-400 text-right mt-2" x-text="formatDate(msg.date)"></div>
+                    <div class="msg-sender">
+                        <span class="truncate" x-text="msg.sender"></span>
+                        <span class="msg-date" x-text="formatDateShort(msg.date)"></span>
+                    </div>
+                    <div class="msg-subject truncate" x-text="msg.subject"></div>
+                    <div class="msg-preview" x-text="msg.preview"></div>
                 </div>
             </template>
 
             <!-- Loading indicator at the bottom -->
             <template x-if="loadingMore">
-                <div class="p-4 text-center text-xs text-gray-500">Loading more messages...</div>
+                <div class="p-4 text-center text-xs text-gray-500">Loading more...</div>
             </template>
 
             <template x-if="!hasMoreMessages && messages.length > 0">
-                <div class="p-4 text-center text-xs text-gray-400">No more messages</div>
+                <div class="p-4 text-center text-xs text-gray-400">End of list</div>
             </template>
 
             <template x-if="!loadingMessages && messages.length === 0">
-                <div class="p-8 text-center text-gray-500">
-                    <div class="text-4xl mb-2">🔍</div>
-                    <p x-text="searchQuery ? 'No messages found matching your search.' : 'No messages in this folder.'"></p>
+                <div class="p-8 text-center text-gray-500 flex flex-col items-center mt-10">
+                    <div class="text-4xl mb-4 opacity-30">📭</div>
+                    <p x-text="searchQuery ? 'No messages found.' : 'Folder is empty.'"></p>
                 </div>
             </template>
         </div>
     </div>
 
     <!-- Right Column: Message View -->
-    <div class="mailsync-message-view flex-1 overflow-y-auto bg-white p-8 relative">
+    <div class="mailsync-message-view">
         <template x-if="!activeMessage && !isComposing">
-            <div class="empty-state flex flex-col items-center justify-center h-full text-gray-400">
-                <div class="empty-icon text-6xl mb-4">✉️</div>
+            <div class="empty-state">
+                <div class="empty-icon">✉️</div>
                 <p>Select an item to read</p>
             </div>
         </template>
 
         <template x-if="loadingContent">
-            <div class="p-8 text-center">Loading content...</div>
+            <div class="p-8 text-center text-gray-500">Loading content...</div>
         </template>
 
         <template x-if="activeMessage && !loadingContent && !isComposing">
             <div class="message-detail">
-                <div class="message-header mb-8 border-b border-gray-200 pb-6">
-                    <h2 class="text-2xl mb-6 text-gray-800" x-text="activeMessage.subject"></h2>
-                    <div class="message-meta flex items-center gap-6">
-                        <div class="sender-avatar w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold" x-text="getInitials(activeMessage.sender)"></div>
-                        <div class="meta-info flex-1">
-                            <div class="sender-name font-bold text-lg text-gray-800" x-text="activeMessage.sender"></div>
-                            <div class="message-date text-gray-500 text-sm" x-text="activeMessage.date"></div>
+                <div class="message-header">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 x-text="activeMessage.subject"></h2>
+                        <div class="flex gap-2">
+                            <button class="action-btn secondary text-red-600 hover:text-red-800 hover:bg-red-50 px-3" @click="deleteMessage()" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="message-meta">
+                        <div class="sender-avatar" x-text="getInitials(activeMessage.sender)"></div>
+                        <div class="meta-info">
+                            <div class="sender-name" x-text="activeMessage.sender"></div>
+                            <div class="message-date" x-text="formatDateFull(activeMessage.date)"></div>
                         </div>
                         <div class="message-actions flex gap-2 relative">
-                            <button class="action-btn secondary" @click="replyToMessage()">Reply</button>
+                            <button class="action-btn secondary flex items-center gap-2" @click="replyToMessage()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                </svg>
+                                Reply
+                            </button>
 
                             <!-- Move Button & Dropdown -->
                             <div class="relative" @click.away="showMoveDropdown = false">
-                                <button class="action-btn secondary" @click="showMoveDropdown = !showMoveDropdown">Move</button>
-                                <div class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-64 overflow-y-auto" x-show="showMoveDropdown" style="display: none;">
+                                <button class="action-btn secondary flex items-center gap-2" @click="showMoveDropdown = !showMoveDropdown">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                    </svg>
+                                    Move
+                                </button>
+                                <div class="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded shadow-lg z-10 max-h-64 overflow-y-auto" x-show="showMoveDropdown" style="display: none;">
                                     <template x-for="folder in folders" :key="folder.id">
-                                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                        <div class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm flex items-center gap-2"
                                              x-show="folder.id !== activeFolderId"
                                              @click="moveMessage(folder.id)">
+                                            <span class="text-gray-400" x-html="getFolderIcon(folder.name)"></span>
                                             <span x-text="folder.name"></span>
                                         </div>
                                     </template>
                                 </div>
                             </div>
-
-                            <!-- Delete Button -->
-                            <button class="action-btn secondary text-red-600 hover:text-red-800 hover:bg-red-50" @click="deleteMessage()">Delete</button>
                         </div>
                     </div>
                 </div>
@@ -153,16 +179,21 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
 
                 <!-- Non-image Attachments -->
                 <template x-if="activeMessage.attachments && hasNonImageAttachments(activeMessage.attachments)">
-                    <div class="message-attachments border-t border-gray-200 pt-6">
-                        <h4 class="mb-4 text-gray-600 uppercase text-xs font-bold tracking-wide">Attachments</h4>
-                        <div class="attachments-grid flex flex-wrap gap-4">
+                    <div class="message-attachments">
+                        <h4 class="mb-4 text-gray-500 uppercase text-xs font-bold tracking-wide flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            Attachments
+                        </h4>
+                        <div class="attachments-grid">
                             <template x-for="att in getNonImageAttachments(activeMessage.attachments)" :key="att.id">
-                                <a :href="att.download_url" target="_blank" class="attachment-card flex items-center px-4 py-3 bg-gray-100 border border-gray-300 rounded no-underline text-gray-800 hover:bg-gray-200 transition-colors">
-                                    <span class="att-icon mr-3 w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
+                                <a :href="att.download_url" target="_blank" class="attachment-card">
+                                    <span class="att-icon w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
                                           :class="getFileTypeClass(att.filename, att.mime)"
                                           x-text="getFileExtension(att.filename)"></span>
-                                    <span class="att-name" x-text="att.filename"></span>
-                                    <span class="att-size text-gray-500 ml-2 text-sm" x-text="formatSize(att.size)"></span>
+                                    <span class="att-name truncate max-w-[150px]" x-text="att.filename"></span>
+                                    <span class="att-size" x-text="formatSize(att.size)"></span>
                                 </a>
                             </template>
                         </div>
@@ -172,39 +203,60 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
         </template>
 
         <!-- Compose / Reply Mode -->
-        <div class="compose-view bg-white h-full flex flex-col" x-show="isComposing" style="display: none;">
-            <h3 class="text-xl mb-6" x-text="activeMessageId ? 'Reply' : 'New Message'"></h3>
-            <form @submit.prevent="sendMessage" class="flex-1 flex flex-col">
+        <div class="compose-view" x-show="isComposing" style="display: none;">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
+                <h3 class="text-2xl text-gray-800" x-text="activeMessageId ? 'Reply' : 'New Message'"></h3>
+                <button @click="isComposing = false" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <form @submit.prevent="sendMessage" class="flex-1 flex flex-col h-full">
 
                 <div class="field mb-4">
-                    <label class="block mb-2 font-bold text-gray-700">To:</label>
-                    <input type="text" x-model="composeTo" class="admin__control-text !w-full p-2" :readonly="!!activeMessageId">
+                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">To</label>
+                    <input type="text" x-model="composeTo" class="admin__control-text !w-full p-3 border-gray-300 rounded" :readonly="!!activeMessageId">
                 </div>
 
                 <div class="field mb-4">
-                    <label class="block mb-2 font-bold text-gray-700">Subject:</label>
-                    <input type="text" x-model="composeSubject" class="admin__control-text !w-full p-2" :readonly="!!activeMessageId">
+                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">Subject</label>
+                    <input type="text" x-model="composeSubject" class="admin__control-text !w-full p-3 border-gray-300 rounded" :readonly="!!activeMessageId">
                 </div>
 
-                <div class="field flex-1 mb-4">
-                    <label class="block mb-2 font-bold text-gray-700">Message:</label>
-                    <textarea x-model="composeBody" class="admin__control-textarea !w-full h-full p-4 min-h-[400px]" placeholder="Type your message..."></textarea>
+                <div class="field flex-1 mb-4 flex flex-col">
+                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">Message</label>
+                    <textarea x-model="composeBody" class="admin__control-textarea !w-full flex-1 p-4 border-gray-300 rounded resize-none font-sans text-base" placeholder="Type your message..."></textarea>
                 </div>
 
                 <div class="field mb-6">
-                    <label class="block mb-2 font-bold text-gray-700">Attachments:</label>
-                    <input type="file" multiple @change="handleFileUpload($event)" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                    <label class="block mb-2 font-bold text-gray-700 text-sm uppercase tracking-wide">Attachments</label>
+                    <div class="flex items-center gap-4">
+                        <label class="cursor-pointer action-btn secondary flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            <span>Add Files</span>
+                            <input type="file" multiple @change="handleFileUpload($event)" class="hidden"/>
+                        </label>
+                        <span class="text-gray-400 text-sm" x-show="filesToUpload.length === 0">No files selected</span>
+                    </div>
 
                     <!-- New Attachments Preview -->
-                    <div class="mt-4 flex flex-wrap gap-4" x-show="filesToUpload.length > 0">
+                    <div class="mt-4 flex flex-wrap gap-3" x-show="filesToUpload.length > 0">
                         <template x-for="(file, index) in filesToUpload" :key="index">
-                            <div class="attachment-card flex items-center px-4 py-3 bg-gray-100 border border-gray-300 rounded text-gray-800 relative group">
-                                <span class="att-icon mr-3 w-8 h-8 flex items-center justify-center rounded text-white font-bold text-xs"
+                            <div class="attachment-card pr-2">
+                                <span class="att-icon w-6 h-6 flex items-center justify-center rounded text-white font-bold text-[10px]"
                                       :class="getFileTypeClass(file.name, file.type)"
                                       x-text="getFileExtension(file.name)"></span>
-                                <span class="att-name" x-text="file.name"></span>
-                                <span class="att-size text-gray-500 ml-2 text-sm" x-text="formatSize(file.size)"></span>
-                                <button type="button" @click="removeFile(index)" class="ml-2 text-red-500 hover:text-red-700 font-bold">×</button>
+                                <span class="att-name text-sm" x-text="file.name"></span>
+                                <span class="att-size text-xs" x-text="formatSize(file.size)"></span>
+                                <button type="button" @click="removeFile(index)" class="ml-2 text-gray-400 hover:text-red-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
                             </div>
                         </template>
                     </div>
@@ -212,8 +264,8 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
 
                 <div class="actions pt-4 border-t border-gray-200 flex justify-end gap-3">
                     <button type="button" class="action-btn secondary" @click="isComposing = false">Cancel</button>
-                    <button type="submit" class="action-btn primary" :disabled="sending">
-                        <span x-show="!sending">Send</span>
+                    <button type="submit" class="action-btn primary px-8" :disabled="sending">
+                        <span x-show="!sending">Send Message</span>
                         <span x-show="sending">Sending...</span>
                     </button>
                 </div>
@@ -562,6 +614,20 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
                     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
                 },
 
+                formatDateShort(dateStr) {
+                    const d = new Date(dateStr);
+                    const now = new Date();
+                    if (d.toDateString() === now.toDateString()) {
+                        return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    }
+                    return d.toLocaleDateString();
+                },
+
+                formatDateFull(dateStr) {
+                    const d = new Date(dateStr);
+                    return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' at ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                },
+
                 getInitials(name) {
                     return name ? name.charAt(0).toUpperCase() : '?';
                 },
@@ -638,29 +704,52 @@ $currentWebsiteId = $block->getCurrentWebsiteId();
                     return processedContent;
                 },
 
-                getFolderLevel(name) {
-                    // Assuming folders are separated by '.' or '/'
-                    // Adjust this logic based on your folder names are structured
-                    // Example: "INBOX.Archive" -> level 1
-                    const separators = ['.', '/'];
-                    let level = 0;
-                    for (const sep of separators) {
-                        const count = (name.match(new RegExp('\\' + sep, 'g')) || []).length;
-                        if (count > level) level = count;
-                    }
-                    return level;
+                getFolderLevel(path, delimiter) {
+                    if (!delimiter) delimiter = '/';
+                    // Count occurrences of delimiter in path
+                    // Example: "INBOX.Archive" with delimiter "." -> level 1
+                    // "INBOX" -> level 0
+                    return (path.match(new RegExp('\\' + (delimiter === '.' ? '\\.' : delimiter), 'g')) || []).length;
                 },
 
-                getFolderName(name) {
-                    // Returns only the last part of the folder name
-                    // Example: "INBOX.Archive" -> "Archive"
-                    const separators = ['.', '/'];
-                    for (const sep of separators) {
-                        if (name.includes(sep)) {
-                            return name.split(sep).pop();
-                        }
+                getFolderName(name, path, delimiter) {
+                    if (!delimiter) delimiter = '/';
+                    // If name is already short (e.g. "Archive"), return it.
+                    // If name is full path (e.g. "INBOX.Archive"), split it.
+                    // Usually IMAP returns full path in 'name' or 'path' depending on server.
+                    // We use 'path' for hierarchy calculation, but 'name' for display.
+                    // Let's try to split 'name' just in case.
+
+                    if (name.includes(delimiter)) {
+                        return name.split(delimiter).pop();
                     }
                     return name;
+                },
+
+                getFolderIcon(name) {
+                    const lowerName = name.toLowerCase();
+                    // Inbox
+                    if (lowerName.includes('inbox') || lowerName.includes('odebrane')) {
+                        return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>`;
+                    }
+                    // Sent
+                    if (lowerName.includes('sent') || lowerName.includes('wysłane')) {
+                        return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>`;
+                    }
+                    // Trash
+                    if (lowerName.includes('trash') || lowerName.includes('bin') || lowerName.includes('kosz') || lowerName.includes('deleted')) {
+                        return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+                    }
+                    // Drafts
+                    if (lowerName.includes('draft') || lowerName.includes('szkice')) {
+                        return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`;
+                    }
+                    // Spam
+                    if (lowerName.includes('spam') || lowerName.includes('junk')) {
+                        return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`;
+                    }
+                    // Default Folder
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>`;
                 }
             }
         }

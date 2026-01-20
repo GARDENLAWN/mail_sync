@@ -25,7 +25,8 @@ class Folders extends Action
         $websiteId = (int)$this->getRequest()->getParam('website_id');
 
         $collection = $this->collectionFactory->create();
-        $collection->setOrder('name', 'ASC');
+        // Sort by path to ensure hierarchy order (Parent -> Child)
+        $collection->setOrder('path', 'ASC');
 
         if ($websiteId) {
             $collection->addFieldToFilter('website_id', $websiteId);
@@ -43,6 +44,7 @@ class Folders extends Action
                 'id' => $folderId,
                 'name' => $folder->getName(),
                 'path' => $folder->getPath(),
+                'delimiter' => $folder->getDelimiter(), // Return delimiter
                 'message_count' => (int)$folderCounts['total'],
                 'unread_count' => (int)$folderCounts['unread']
             ];
