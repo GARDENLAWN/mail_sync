@@ -33,6 +33,13 @@
         </arguments>
     </virtualType>
 
+    <virtualType name="GardenLawnMailSyncMessageGridCollection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">gardenlawn_mailsync_message</argument>
+            <argument name="resourceModel" xsi:type="string">GardenLawn\MailSync\Model\ResourceModel\Message</argument>
+        </arguments>
+    </virtualType>
+
     <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
         <arguments>
             <argument name="collections" xsi:type="array">
@@ -40,11 +47,4 @@
             </argument>
         </arguments>
     </type>
-
-    <virtualType name="GardenLawnMailSyncMessageGridCollection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
-        <arguments>
-            <argument name="mainTable" xsi:type="string">gardenlawn_mailsync_message</argument>
-            <argument name="resourceModel" xsi:type="string">GardenLawn\MailSync\Model\ResourceModel\Message</argument>
-        </arguments>
-    </virtualType>
 </config>
