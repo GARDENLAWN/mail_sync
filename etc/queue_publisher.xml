@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework-message-queue:etc/publisher.xsd">
+    <publisher topic="gardenlawn.mail.sync">
+        <connection name="amqp" />
+    </publisher>
+    <publisher topic="gardenlawn.mail.sent">
+        <connection name="amqp" />
+    </publisher>
+</config>
