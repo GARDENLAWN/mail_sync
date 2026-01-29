@@ -10,8 +10,8 @@ use Magento\Store\Model\ScopeInterface;
 class Config
 {
     // Native Magento Paths
-    private const XML_PATH_TRANS_EMAIL = 'trans_email/ident_general/email';
-    private const XML_PATH_TRANS_NAME = 'trans_email/ident_general/name';
+    private const XML_PATH_TRANS_EMAIL = 'system/smtp/username';
+    private const XML_PATH_TRANS_NAME = 'system/smtp/username';
     private const XML_PATH_CORE_SMTP_HOST = 'system/smtp/host';
     private const XML_PATH_CORE_SMTP_PORT = 'system/smtp/port';
 
